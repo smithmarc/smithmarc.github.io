@@ -1,0 +1,118 @@
+/* -------------------------------- BODY -------------------------------------*/
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+	height: 100%;
+
+	background: #fff; /* Same color as your menu */
+	font-family: "Ek Mukta", Arial, sans-serif;
+}
+
+#page {
+	position: relative; /* Set the position property so z-index will apply */
+	z-index: 20;
+	background: #b9f6ca;
+	height: 100%;
+}
+
+#map {
+	height: 100%;
+}
+
+/* ------------------------------- MAP ERROR ---------------------------------*/
+
+#error {
+  color: #bc152c;
+}
+
+.message {
+  background-color: rgba(188,21,44,0.9);
+  padding: 1em 2em;
+  color: #fff;
+  text-align: center;
+}
+
+/* -------------------------------- BUTTON -----------------------------------*/
+
+#toggle-menu {
+	position: absolute;
+	top: 2.5px;
+	left: 120px;
+	padding: 10px 15px;
+	-webkit-border-radius: 50%;
+	-moz-border-radius: 50%;
+	border-radius: 50%;
+	background: #69f0ae;
+	box-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
+	z-index: 9999;
+}
+
+.fancy-checkbox input[type="checkbox"] {
+  display: none;
+}
+
+.fancy-checkbox input[type="checkbox"]:checked ~ .checked
+{
+  display: inline-block;
+}
+
+/* -------------------------------- SIDEBAR ----------------------------------*/
+
+.sidebar {
+	position: absolute;
+	width: 240px;
+	z-index: 30;
+	top: 55px;
+	background-color: rgba(0, 0, 0, 0.65);
+	height: 100%;
+}
+
+.sidebar-title {
+  color: #fff;
+  width: 100%;
+	text-align: center;
+}
+
+.sidebar-title span {
+  position: relative;
+	font-size: 19px;
+	font-weight: bold;
+}
+
+#searchbox {
+	width: 100%;
+}
+
+#searchbox:placeholder-shown {
+	font-family: "Ek Mukta", Arial, sans-serif;
+}
+
+.nav {
+  position: relative;
+  list-style: none;
+  padding: 0;
+}
+
+.item {
+	color: #fff;
+	font-size: 14px;
+  position: relative;
+  padding: 1em 0.25em;
+  border-bottom: 1px dashed #5abe41;
+  cursor: pointer;
+	text-align: center;
+}
+
+.item:first-child {
+  border-top: 1px solid #5abe41;
+}
+
+.item:last-child {
+  border-bottom: 1px solid #5abe41;
+}
+
+.item:hover {
+  background-color: rgba(0,200,0,.9);
+}
