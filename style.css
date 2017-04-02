@@ -2,26 +2,42 @@ html,
 body {
   margin: 0;
   border: 0;
-  padding: 0;
+  padding: 2em;
+  margin-left: auto;
+  margin-right: auto;
   font-family: 'Maven Pro', sans-serif;
-  
+
   width: 960px;
-  margin: auto 2em;
 }
 
-main {
-  position: absolute;
-  padding: 2em;
-  border: 1px solid #000;
-  border-radius: 10%;
+header {
+  text-align: center;
+}
+
+header h1 {
+  font-size: 48px;
+}
+
+.main {
+  position: relative;
+  padding: 1em;
+  text-align: center;
+  font-family: 'Open Sans', sans-serif;
+  font-size: 18px;
+  border: 1px solid #ddd;
+  border-radius: 18px;
+
+  background: #eee;
 }
 
 a {
-  position: absolute;
-  padding: 2em;
+  position: relative;
+  top: 2em;
+  padding: 1.5em;
+  margin: 5px 10px;
   border: 1px solid #000;
-  border-radius: 5px;
-  
+  border-radius: 18px;
+
   background: #000;
   color: #e2b96f;
 }
