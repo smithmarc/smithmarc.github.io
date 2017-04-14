@@ -10,6 +10,11 @@ body {
   width: 960px;
 }
 
+::selection {
+  background: #111;
+  color: #fff;
+}
+
 header {
   text-align: center;
 }
