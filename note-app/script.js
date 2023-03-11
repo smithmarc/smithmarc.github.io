@@ -81,5 +81,5 @@ function formatDate(date) {
   const minutes = date.getMinutes().toString().padStart(2, '0');
   const ampm = hours >= 12 ? 'PM' : 'AM';
   const formattedHours = hours % 12 || 12;
-  return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()} ${formattedHours}:${minutes} ${ampm}`;
+  return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()} ${formattedHours}:${minutes} ${ampm}`;
 }
