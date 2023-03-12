@@ -3,6 +3,7 @@ let form = document.querySelector('form');
 let titleInput = document.querySelector('#title');
 let contentInput = document.querySelector('#content');
 let noteCount = 0;
+const exportBtn = document.getElementById('export-btn');
 
 // Load notes from localStorage
 let notes = JSON.parse(localStorage.getItem('notes')) || [];
@@ -36,6 +37,23 @@ form.addEventListener('submit', (e) => {
   // Clear form inputs
   titleInput.value = '';
   contentInput.value = '';
+});
+
+exportBtn.addEventListener('click', () => {
+  // Create CSV string
+  let csv = 'Title,Content,Timestamp\n';
+  notes.forEach(note => {
+    csv += `${note.title},${note.content},${note.timestamp}\n`;
+  });
+
+  // Download CSV file
+  const downloadLink = document.createElement('a');
+  downloadLink.setAttribute('href', 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv));
+  downloadLink.setAttribute('download', 'notes.csv');
+  downloadLink.style.display = 'none';
+  document.body.appendChild(downloadLink);
+  downloadLink.click();
+  document.body.removeChild(downloadLink);
 });
 
 function createNoteElement(noteData) {
