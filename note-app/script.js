@@ -1,11 +1,11 @@
-const notesContainer = document.querySelector('.notes');
-const form = document.querySelector('form');
-const titleInput = document.querySelector('#title');
-const contentInput = document.querySelector('#content');
+let notesContainer = document.querySelector('.notes');
+let form = document.querySelector('form');
+let titleInput = document.querySelector('#title');
+let contentInput = document.querySelector('#content');
 let noteCount = 0;
 
 // Load notes from localStorage
-const notes = JSON.parse(localStorage.getItem('notes')) || [];
+let notes = JSON.parse(localStorage.getItem('notes')) || [];
 
 // Render notes to the page
 notes.forEach(noteData => {
@@ -63,7 +63,7 @@ function createNoteElement(noteData) {
   deleteButton.classList.add('note-delete');
   deleteButton.innerHTML = '<i class="icon-trash icon-large"></i>';
   deleteButton.addEventListener('click', () => {
-  note.remove();
+    note.remove();
 
     // Remove note data from notes array
     notes = notes.filter(n => n.id !== noteData.id);
@@ -78,7 +78,6 @@ function createNoteElement(noteData) {
       localStorage.setItem('notes', JSON.stringify(notes));
     }
   });
-
   note.appendChild(deleteButton);
 
   return note;
