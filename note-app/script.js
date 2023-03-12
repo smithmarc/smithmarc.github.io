@@ -63,14 +63,22 @@ function createNoteElement(noteData) {
   deleteButton.classList.add('note-delete');
   deleteButton.innerHTML = '<i class="icon-trash icon-large"></i>';
   deleteButton.addEventListener('click', () => {
-    note.remove();
+  note.remove();
 
     // Remove note data from notes array
     notes = notes.filter(n => n.id !== noteData.id);
 
     // Save notes to localStorage
     localStorage.setItem('notes', JSON.stringify(notes));
+
+    // Delete note from localStorage
+    const index = notes.findIndex(n => n.id === noteData.id);
+    if (index !== -1) {
+      notes.splice(index, 1);
+      localStorage.setItem('notes', JSON.stringify(notes));
+    }
   });
+
   note.appendChild(deleteButton);
 
   return note;
