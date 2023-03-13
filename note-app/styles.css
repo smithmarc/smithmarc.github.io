@@ -57,8 +57,23 @@ button[type="submit"] {
   transition: background-color 0.3s ease-in-out;
 }
 
+#exportbtn {
+  background-color: #e0b058;
+  color: white;
+  font-size: 18px;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease-in-out;
+}
+
 button[type="submit"]:hover {
   background-color: #1F9AAD;
+}
+
+#export-btn:hover {
+  background-color: #e05858;
 }
 
 .notes {
