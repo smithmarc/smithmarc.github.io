@@ -1,7 +1,6 @@
 let notesContainer = document.querySelector('.notes');
 let form = document.querySelector('form');
 let titleInput = document.querySelector('#title');
-let contentInput = document.querySelector('#content');
 let noteCount = 0;
 const exportBtn = document.getElementById('export-btn');
 
@@ -14,6 +13,11 @@ notes.forEach(noteData => {
   notesContainer.appendChild(note);
 });
 
+// Initialize Quill editor
+let quill = new Quill('#content', {
+  theme: 'snow'
+});
+
 form.addEventListener('submit', (e) => {
   e.preventDefault();
 
@@ -21,7 +25,7 @@ form.addEventListener('submit', (e) => {
   const noteData = {
     id: Date.now(),
     title: titleInput.value,
-    content: contentInput.value,
+    content: quill.root.innerHTML,
     timestamp: new Date().toISOString(),
   };
 
@@ -36,7 +40,7 @@ form.addEventListener('submit', (e) => {
 
   // Clear form inputs
   titleInput.value = '';
-  contentInput.value = '';
+  quill.setText('');
 });
 
 exportBtn.addEventListener('click', () => {
@@ -72,11 +76,48 @@ function createNoteElement(noteData) {
 
   note.appendChild(noteTitle);
 
-  const noteContent = document.createElement('p');
+  const noteContent = document.createElement('div');
   noteContent.classList.add('note-content');
-  noteContent.innerText = noteData.content;
   note.appendChild(noteContent);
 
+  const editor = document.createElement('div');
+  editor.classList.add('editor');
+  noteContent.appendChild(editor);
+
+  const toolbar = document.createElement('div');
+  toolbar.classList.add('toolbar');
+  editor.appendChild(toolbar);
+
+  const qlBold = document.createElement('button');
+  qlBold.classList.add('ql-bold');
+  qlBold.innerText = 'B';
+  toolbar.appendChild(qlBold);
+
+  const qlItalic = document.createElement('button');
+  qlItalic.classList.add('ql-italic');
+  qlItalic.innerText = 'I';
+  toolbar.appendChild(qlItalic);
+
+  const qlUnderline = document.createElement('button');
+  qlUnderline.classList.add('ql-underline');
+  qlUnderline.innerText = 'U';
+  toolbar.appendChild(qlUnderline);
+
+  const qlStrike = document.createElement('button');
+  qlStrike.classList.add('ql-strike');
+  qlStrike.innerText = 'S';
+  toolbar.appendChild(qlStrike);
+
+  const qlList = document.createElement('button');
+  qlList.classList.add('ql-list');
+  qlList.innerHTML = '<i class="icon-list"></i>';
+  toolbar.appendChild(qlList);
+
+  const qlLink = document.createElement('button');
+  qlLink.classList.add('ql-link');
+  qlLink.innerHTML = 'L';
+  toolbar.appendChild(qlLink);
+  
   const deleteButton = document.createElement('button');
   deleteButton.classList.add('note-delete');
   deleteButton.innerHTML = '<i class="icon-trash icon-large"></i>';
