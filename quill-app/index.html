@@ -14,24 +14,39 @@
 			box-sizing: border-box;
 		}
 		
-		.ql-toolbar {
-			margin: 0 auto;
-			display: block;
-			width: 800px;
-		}
-		
 		.editor-container {
 			max-width: 800px;
-  			margin: 20px auto;
-  			padding: 20px;
+			margin: 20px auto;
+			padding: 20px;
 			height: 500px;
 			border: 1px solid #ccc;
 			border-radius: 5px;
+			position: relative;
+		}
+
+		/* Style the Quill toolbar to look like it's part of the editor */
+		.ql-toolbar {
+			background-color: #f8f8f8;
+			border-bottom: 1px solid #ccc;
+			border-top-left-radius: 5px;
+			border-top-right-radius: 5px;
+			position: absolute;
+			top: 0;
+			left: 0;
+			right: 0;
+			z-index: 1;
+		}
+
+		.ql-editor {
+			margin-top: 30px;
+			height: calc(100% - 30px);
 		}
 	</style>
 </head>
 <body>
-	<div class="editor-container"></div>
+	<div class="editor-container">
+		<div class="ql-toolbar"></div>
+	</div>
 	<div class="button-container">
 		<button id="submit-button">Submit</button>
 	</div>
@@ -44,7 +59,7 @@
 
 	<!-- Your custom JavaScript -->
 	<script>
-		var quill = new Quill('.editor-container', {
+		var quill = new Quill('.editor-container .ql-editor', {
 			theme: 'snow'
 		});
 
