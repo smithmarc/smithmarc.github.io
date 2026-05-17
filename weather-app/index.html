@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>smithmarc — Weather</title>
+  <title>Nimbus — Weather</title>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -179,6 +179,14 @@
       letter-spacing: 0.2em;
       text-transform: uppercase;
       margin-top: 6px;
+    }
+
+    .coords {
+      font-size: 0.6rem;
+      color: var(--muted);
+      letter-spacing: 0.12em;
+      margin-top: 4px;
+      opacity: 0.7;
     }
 
     .datetime {
@@ -511,7 +519,7 @@
 <div class="wrapper">
 
   <header class="header">
-    <div class="logo">smith<span>marc</span></div>
+    <div class="logo">nim<span>bus</span></div>
     <div class="tagline">Weather</div>
   </header>
 
@@ -557,6 +565,7 @@
       <div>
         <div class="city-name" id="cityName">—</div>
         <div class="country" id="countryName">—</div>
+        <div class="coords" id="coordsDisplay">—</div>
       </div>
       <div class="datetime" id="dateTime">—</div>
     </div>
@@ -770,7 +779,13 @@
     const ul = unitLabel(), sl = speedLabel(), tz = d.timezone;
 
     document.getElementById('cityName').textContent       = d.name;
-    document.getElementById('countryName').textContent    = d.sys.country;
+    const region = d.sys.state ? `${d.sys.state}, ` : '';
+    document.getElementById('countryName').textContent    = `${region}${d.sys.country}`;
+    const lat = d.coord.lat;
+    const lon = d.coord.lon;
+    const latStr = `${Math.abs(lat).toFixed(2)}°${lat >= 0 ? 'N' : 'S'}`;
+    const lonStr = `${Math.abs(lon).toFixed(2)}°${lon >= 0 ? 'E' : 'W'}`;
+    document.getElementById('coordsDisplay').textContent  = `${latStr}, ${lonStr}`;
     document.getElementById('dateTime').innerHTML         = formatDateTime(d.dt, tz).replace('\n','<br>');
     document.getElementById('tempMain').innerHTML         = `${Math.round(d.main.temp)}<sup>${ul}</sup>`;
     document.getElementById('feelsLike').textContent      = `${Math.round(d.main.feels_like)}${ul}`;
