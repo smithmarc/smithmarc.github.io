@@ -664,43 +664,63 @@
     }
 
     /* ── Globe map ── */
+    .globe-section {
+      margin-top: 28px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .globe-label {
+      font-size: 0.58rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--muted);
+      align-self: flex-start;
+    }
+
     .globe-wrap {
       position: relative;
-      width: 90px;
-      height: 90px;
+      width: 100%;
+      max-width: 340px;
+      aspect-ratio: 2 / 1;
       flex-shrink: 0;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid var(--border);
     }
 
     .globe-svg {
       width: 100%;
       height: 100%;
-      border-radius: 50%;
-      overflow: hidden;
       display: block;
-      filter: drop-shadow(0 0 8px rgba(126,184,201,0.15));
+      filter: drop-shadow(0 0 12px rgba(126,184,201,0.12));
     }
 
     .globe-dot {
       position: absolute;
-      width: 8px;
-      height: 8px;
+      width: 10px;
+      height: 10px;
       border-radius: 50%;
       background: #e05454;
       box-shadow: 0 0 0 0 rgba(224,84,84,0.6);
       transform: translate(-50%, -50%);
       animation: pulse-dot 2s ease-out infinite;
       pointer-events: none;
+      z-index: 2;
     }
 
     @keyframes pulse-dot {
-      0%   { box-shadow: 0 0 0 0   rgba(224,84,84,0.7); }
-      70%  { box-shadow: 0 0 0 7px rgba(224,84,84,0);   }
-      100% { box-shadow: 0 0 0 0   rgba(224,84,84,0);   }
+      0%   { box-shadow: 0 0 0 0    rgba(224,84,84,0.8); }
+      70%  { box-shadow: 0 0 0 10px rgba(224,84,84,0);   }
+      100% { box-shadow: 0 0 0 0    rgba(224,84,84,0);   }
     }
 
     .meta-left { flex: 1; min-width: 0; }
     .meta-right { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
-    .globe-wrap-mobile { display: none; }
   </style>
 </head>
 <body>
@@ -758,10 +778,6 @@
       </div>
       <div class="meta-right">
         <div class="datetime" id="dateTime">—</div>
-        <div class="globe-wrap" id="globeWrap" style="display:none;">
-          <svg class="globe-svg" id="globeSvg" viewBox="0 0 360 180" xmlns="http://www.w3.org/2000/svg"></svg>
-          <div class="globe-dot" id="globeDot" style="display:none;"></div>
-        </div>
       </div>
     </div>
 
@@ -824,6 +840,15 @@
     <div class="sun-row">
       <div class="sun-item">🌅 Sunrise <strong id="sunrise">—</strong></div>
       <div class="sun-item">🌇 Sunset <strong id="sunset">—</strong></div>
+    </div>
+
+    <!-- Globe location map -->
+    <div class="globe-section" id="globeSection" style="display:none;">
+      <div class="globe-label">Location</div>
+      <div class="globe-wrap" id="globeWrap">
+        <svg class="globe-svg" id="globeSvg" viewBox="0 0 360 180" xmlns="http://www.w3.org/2000/svg"></svg>
+        <div class="globe-dot" id="globeDot" style="display:none;"></div>
+      </div>
     </div>
   </div>
 
@@ -925,6 +950,7 @@
     document.getElementById('loadingCard').style.display = on ? 'block' : 'none';
     if (on) {
       ['weatherCard','forecastCard','historyCard'].forEach(id => {
+        document.getElementById('globeSection').style.display = 'none';
         const el = document.getElementById(id);
         el.classList.remove('visible');
         el.style.display = 'none';
@@ -1368,9 +1394,8 @@
   ];
 
   function renderGlobe(lat, lon) {
-    const svg    = document.getElementById('globeSvg');
-    const dot    = document.getElementById('globeDot');
-    const wrap   = document.getElementById('globeWrap');
+    const svg = document.getElementById('globeSvg');
+    const dot = document.getElementById('globeDot');
 
     // Draw landmasses
     let markup = '';
@@ -1395,10 +1420,10 @@
     const pctX = (lon + 180) / 360;
     const pctY = (90 - lat)  / 180;
 
-    wrap.style.display = 'block';
-    dot.style.display  = 'block';
-    dot.style.left     = `${pctX * 100}%`;
-    dot.style.top      = `${pctY * 100}%`;
+    document.getElementById('globeSection').style.display = 'flex';
+    dot.style.display = 'block';
+    dot.style.left    = `${pctX * 100}%`;
+    dot.style.top     = `${pctY * 100}%`;
   }
 
   window.addEventListener('DOMContentLoaded', () => {
