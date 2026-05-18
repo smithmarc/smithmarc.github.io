@@ -738,6 +738,85 @@
     body {
       transition: background 2s ease;
     }
+
+    /* ── City autocomplete dropdown ── */
+    .search-wrap {
+      position: relative;
+    }
+
+    .search-dropdown {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      right: 0;
+      background: #111520;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      z-index: 100;
+      overflow: hidden;
+      display: none;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    }
+
+    .search-dropdown.open { display: block; }
+
+    .dropdown-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+      gap: 12px;
+    }
+
+    .dropdown-item:last-child { border-bottom: none; }
+    .dropdown-item:hover, .dropdown-item.active { background: rgba(126,184,201,0.08); }
+
+    .dropdown-item-left { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+
+    .dropdown-city {
+      font-size: 0.82rem;
+      color: var(--text);
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .dropdown-region {
+      font-size: 0.62rem;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .dropdown-coords {
+      font-size: 0.58rem;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+      flex-shrink: 0;
+      opacity: 0.7;
+    }
+
+    .dropdown-loading {
+      padding: 14px 16px;
+      font-size: 0.72rem;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .dropdown-empty {
+      padding: 14px 16px;
+      font-size: 0.72rem;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+    }
   </style>
 </head>
 <body>
@@ -764,15 +843,16 @@
     <button class="unit-btn" id="btnF" onclick="setUnit('imperial')">°F</button>
   </div>
 
-  <div class="search-wrap">
+  <div class="search-wrap" id="searchWrap">
     <input class="search-input" id="searchInput" type="text"
-      placeholder="Search city… e.g. Tokyo, London, Sydney"
-      onkeydown="if(event.key==='Enter') fetchWeather()" />
-    <button class="search-btn" onclick="fetchWeather()" title="Search">
+      placeholder="Search city… e.g. Melbourne, London, Tokyo"
+      autocomplete="off" />
+    <button class="search-btn" id="searchBtn" title="Search">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
         <circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="22" y2="22"/>
       </svg>
     </button>
+    <div class="search-dropdown" id="searchDropdown"></div>
   </div>
 
   <div class="error-msg" id="errorMsg"></div>
@@ -1009,8 +1089,158 @@
   const speedLabel = () => unit === 'metric' ? 'm/s' : 'mph';
 
   // ── Fetch current + forecast in parallel ──
-  async function fetchWeather(city) {
-    city = city || document.getElementById('searchInput').value.trim();
+  // ── Autocomplete ──
+  let acDebounce  = null;
+  let acResults   = [];
+  let acIndex     = -1;
+
+  const searchInput    = document.getElementById('searchInput');
+  const searchDropdown = document.getElementById('searchDropdown');
+  const searchBtn      = document.getElementById('searchBtn');
+
+  searchInput.addEventListener('input', () => {
+    clearTimeout(acDebounce);
+    const q = searchInput.value.trim();
+    if (q.length < 2) { closeDropdown(); return; }
+    acDebounce = setTimeout(() => fetchSuggestions(q), 300);
+  });
+
+  searchInput.addEventListener('keydown', e => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); moveActive(1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); moveActive(-1); }
+    else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (acIndex >= 0 && acResults[acIndex]) selectResult(acResults[acIndex]);
+      else if (acResults.length > 0) selectResult(acResults[0]);
+      else fetchWeatherByQuery(searchInput.value.trim());
+    }
+    else if (e.key === 'Escape') closeDropdown();
+  });
+
+  searchBtn.addEventListener('click', () => {
+    if (acResults.length > 0) selectResult(acResults[acIndex >= 0 ? acIndex : 0]);
+    else fetchWeatherByQuery(searchInput.value.trim());
+  });
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', e => {
+    if (!document.getElementById('searchWrap').contains(e.target)) closeDropdown();
+  });
+
+  function moveActive(dir) {
+    const items = searchDropdown.querySelectorAll('.dropdown-item');
+    if (!items.length) return;
+    acIndex = Math.max(0, Math.min(items.length - 1, acIndex + dir));
+    items.forEach((el, i) => el.classList.toggle('active', i === acIndex));
+  }
+
+  function closeDropdown() {
+    searchDropdown.classList.remove('open');
+    searchDropdown.innerHTML = '';
+    acResults = [];
+    acIndex   = -1;
+  }
+
+  async function fetchSuggestions(query) {
+    if (!apiKey) return;
+    searchDropdown.innerHTML = '<div class="dropdown-loading"><div class="spin"></div>Searching…</div>';
+    searchDropdown.classList.add('open');
+
+    try {
+      const res  = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(query)}&limit=6&appid=${apiKey}`);
+      const data = await res.json();
+
+      if (!data.length) {
+        searchDropdown.innerHTML = '<div class="dropdown-empty">No cities found.</div>';
+        acResults = [];
+        return;
+      }
+
+      acResults = data;
+      acIndex   = -1;
+      renderDropdown(data);
+    } catch (e) {
+      closeDropdown();
+    }
+  }
+
+  function renderDropdown(results) {
+    searchDropdown.innerHTML = '';
+    results.forEach((r, i) => {
+      const parts   = [r.state, r.country].filter(Boolean);
+      const region  = parts.join(', ');
+      const latStr  = `${Math.abs(r.lat).toFixed(1)}°${r.lat >= 0 ? 'N' : 'S'}`;
+      const lonStr  = `${Math.abs(r.lon).toFixed(1)}°${r.lon >= 0 ? 'E' : 'W'}`;
+
+      const item = document.createElement('div');
+      item.className = 'dropdown-item';
+      item.dataset.index = i;
+      item.innerHTML = `
+        <div class="dropdown-item-left">
+          <div class="dropdown-city">${r.name}${r.local_names && r.local_names.en && r.local_names.en !== r.name ? ' <span style="opacity:0.5;font-size:0.75em">/ ' + r.local_names.en + '</span>' : ''}</div>
+          <div class="dropdown-region">${region}</div>
+        </div>
+        <div class="dropdown-coords">${latStr}, ${lonStr}</div>`;
+
+      item.addEventListener('mouseenter', () => {
+        acIndex = i;
+        searchDropdown.querySelectorAll('.dropdown-item').forEach((el,j) => el.classList.toggle('active', j === i));
+      });
+      item.addEventListener('click', () => selectResult(r));
+      searchDropdown.appendChild(item);
+    });
+    searchDropdown.classList.add('open');
+  }
+
+  function selectResult(r) {
+    searchInput.value = r.name;
+    closeDropdown();
+    fetchWeatherByCoords(r.lat, r.lon, r.name, r.state, r.country);
+  }
+
+  // Fetch weather by lat/lon (used after selecting from dropdown)
+  async function fetchWeatherByCoords(lat, lon, name, state, country) {
+    if (!apiKey) { showError('Please enter your OpenWeatherMap API key above first.'); return; }
+    showError('');
+    setLoading(true);
+
+    try {
+      const base = 'https://api.openweathermap.org/data/2.5';
+      const q    = `lat=${lat}&lon=${lon}&units=${unit}&appid=${apiKey}`;
+
+      const [curRes, fcastRes] = await Promise.all([
+        fetch(`${base}/weather?${q}`),
+        fetch(`${base}/forecast?${q}&cnt=40`)
+      ]);
+
+      const cur   = await curRes.json();
+      const fcast = await fcastRes.json();
+
+      if (cur.cod !== 200) {
+        setLoading(false);
+        showError(`Error: ${cur.message}`);
+        return;
+      }
+
+      // Override name/region with geocoding result (more accurate)
+      cur._geoName    = name;
+      cur._geoState   = state  || '';
+      cur._geoCountry = country || cur.sys.country;
+      lastCity = `${lat},${lon}`;
+
+      renderWeather(cur);
+      renderForecast(fcast, cur.timezone);
+      fetchHistory(lat, lon);
+      renderGlobe(lat, lon);
+
+    } catch (e) {
+      setLoading(false);
+      showError('Network error — check your connection and try again.');
+    }
+  }
+
+  // Fallback: fetch by text query (Enter with no selection)
+  async function fetchWeatherByQuery(city) {
     if (!city) return;
     if (!apiKey) { showError('Please enter your OpenWeatherMap API key above first.'); return; }
 
@@ -1033,7 +1263,7 @@
       if (cur.cod !== 200) {
         setLoading(false);
         showError(cur.message === 'city not found'
-          ? `City "${city}" not found. Try a different name.`
+          ? `City "${city}" not found — try selecting from the dropdown.`
           : `Error: ${cur.message}`);
         return;
       }
@@ -1049,13 +1279,16 @@
     }
   }
 
+  // Legacy alias so setUnit re-fetch still works
+  function fetchWeather(city) { fetchWeatherByQuery(city || searchInput.value.trim()); }
+
   // ── Current weather ──
   function renderWeather(d) {
     const ul = unitLabel(), sl = speedLabel(), tz = d.timezone;
 
-    document.getElementById('cityName').textContent       = d.name;
-    const region = d.sys.state ? `${d.sys.state}, ` : '';
-    document.getElementById('countryName').textContent    = `${region}${d.sys.country}`;
+    document.getElementById('cityName').textContent       = d._geoName    || d.name;
+    const region = (d._geoState || d.sys.state) ? `${d._geoState || d.sys.state}, ` : '';
+    document.getElementById('countryName').textContent    = `${region}${d._geoCountry || d.sys.country}`;
     const lat = d.coord.lat;
     const lon = d.coord.lon;
     const latStr = `${Math.abs(lat).toFixed(2)}°${lat >= 0 ? 'N' : 'S'}`;
