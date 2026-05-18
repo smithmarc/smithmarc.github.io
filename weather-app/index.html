@@ -721,9 +721,27 @@
 
     .meta-left { flex: 1; min-width: 0; }
     .meta-right { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+
+    /* ── Weather particle canvas ── */
+    #weatherCanvas {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0;
+      transition: opacity 1.2s ease;
+    }
+
+    #weatherCanvas.active { opacity: 1; }
+
+    /* ── Weather theme transitions on body ── */
+    body {
+      transition: background 2s ease;
+    }
   </style>
 </head>
 <body>
+<canvas id="weatherCanvas"></canvas>
 
 <div class="wrapper">
 
@@ -1059,6 +1077,7 @@
     document.getElementById('sunrise').textContent        = formatTime(d.sys.sunrise, tz);
     document.getElementById('sunset').textContent         = formatTime(d.sys.sunset, tz);
 
+    applyWeatherTheme(d.weather[0].id);
     setLoading(false);
     const card = document.getElementById('weatherCard');
     card.style.display = 'block';
@@ -1353,70 +1372,104 @@
   }
 
 
-  // ── Globe ──
-  // Simplified world landmass outlines as SVG path data (equirectangular projection, 360x180 viewBox)
-  const LAND_PATHS = [
-    // North America
-    "M 55,28 L 58,25 L 70,22 L 80,20 L 90,22 L 98,28 L 100,35 L 95,45 L 88,50 L 80,55 L 72,60 L 65,68 L 60,75 L 55,80 L 50,78 L 45,72 L 42,65 L 40,58 L 42,50 L 45,42 L 50,35 Z",
-    "M 98,28 L 105,25 L 115,22 L 120,25 L 118,32 L 112,38 L 105,40 L 100,35 Z",
-    // Greenland
-    "M 130,10 L 145,8 L 158,12 L 160,20 L 155,28 L 145,32 L 135,30 L 128,22 Z",
-    // South America
-    "M 65,80 L 72,78 L 80,80 L 85,88 L 88,98 L 85,110 L 80,120 L 75,130 L 68,138 L 62,132 L 58,122 L 56,112 L 55,100 L 58,90 Z",
-    // Europe
-    "M 160,22 L 168,18 L 178,20 L 185,25 L 188,32 L 182,38 L 175,40 L 168,38 L 162,32 Z",
-    "M 175,28 L 185,25 L 192,28 L 195,35 L 190,42 L 182,44 L 175,40 L 172,34 Z",
-    // Africa
-    "M 168,45 L 178,42 L 190,44 L 198,52 L 200,62 L 198,75 L 192,85 L 185,95 L 178,100 L 170,98 L 162,90 L 158,80 L 156,68 L 158,58 L 162,50 Z",
-    // Asia (simplified, split into chunks)
-    "M 188,18 L 200,15 L 215,16 L 228,20 L 238,25 L 245,32 L 240,40 L 230,45 L 218,48 L 205,45 L 195,40 L 188,32 Z",
-    "M 228,20 L 245,18 L 260,20 L 272,25 L 278,32 L 272,40 L 258,45 L 245,42 L 238,35 Z",
-    "M 258,28 L 272,25 L 285,28 L 295,35 L 298,45 L 292,52 L 280,55 L 268,52 L 260,44 Z",
-    "M 205,45 L 218,48 L 228,55 L 232,65 L 225,72 L 215,75 L 205,70 L 198,62 L 198,52 Z",
-    "M 228,55 L 240,52 L 252,55 L 258,62 L 255,72 L 245,78 L 235,75 L 228,68 Z",
-    // Indian subcontinent
-    "M 215,60 L 225,58 L 232,65 L 230,78 L 224,88 L 216,92 L 210,85 L 208,74 L 210,65 Z",
-    // Southeast Asia
-    "M 255,65 L 268,62 L 278,68 L 280,78 L 274,85 L 264,86 L 256,80 L 252,72 Z",
-    // Australia
-    "M 262,108 L 278,104 L 295,106 L 305,114 L 308,125 L 302,135 L 290,140 L 278,138 L 265,132 L 258,122 L 258,112 Z",
-    // Japan
-    "M 295,32 L 302,28 L 308,32 L 306,40 L 299,42 L 293,38 Z",
-    // UK/Ireland
-    "M 158,24 L 164,22 L 168,26 L 166,32 L 160,34 L 156,30 Z",
-    // Indonesia (partial)
-    "M 272,88 L 282,86 L 290,90 L 292,98 L 284,102 L 274,98 L 270,92 Z",
-    "M 292,90 L 302,88 L 310,92 L 308,100 L 298,102 L 290,98 Z",
-    // New Zealand
-    "M 312,128 L 318,124 L 322,130 L 318,138 L 312,136 Z",
+  // ══════════════════════════════════════════════
+  // GLOBE — Natural Earth simplified outlines
+  // Coordinates in equirectangular space (360×180)
+  // Each point = [lon+180, 90-lat] mapped to viewBox
+  // ══════════════════════════════════════════════
+  function ll(lon, lat) { return `${((lon+180)/360*360).toFixed(1)},${((90-lat)/180*180).toFixed(1)}`; }
+
+  // Polygons defined as arrays of [lon, lat] pairs
+  const LAND_POLYS = [
+    // ── North America ──
+    [[-168,72],[-141,72],[-120,74],[-100,74],[-85,70],[-70,63],[-65,60],[-60,47],[-65,44],[-70,42],[-75,35],[-80,25],[-87,16],[-92,16],[-97,20],[-105,20],[-110,24],[-117,32],[-122,38],[-124,46],[-130,54],[-138,60],[-148,60],[-158,58],[-162,55],[-168,56],[-168,72]],
+    // Alaska peninsula
+    [[-168,56],[-162,55],[-158,58],[-152,60],[-148,60],[-155,59],[-160,58],[-165,54],[-168,54],[-168,56]],
+    // Baja
+    [[-110,24],[-109,24],[-106,26],[-105,24],[-110,24]],
+    // Central America
+    [[-87,16],[-84,10],[-78,8],[-76,8],[-80,8],[-82,10],[-84,14],[-87,16]],
+    // ── Greenland ──
+    [[-55,83],[-30,83],[-18,76],[-20,70],[-30,68],[-42,65],[-50,67],[-55,70],[-58,75],[-55,83]],
+    // ── South America ──
+    [[-80,8],[-76,2],[-72,-4],[-68,-12],[-70,-18],[-68,-24],[-72,-30],[-70,-35],[-72,-42],[-68,-55],[-62,-55],[-58,-52],[-52,-34],[-50,-28],[-44,-22],[-40,-14],[-36,-8],[-34,-4],[-38,0],[-50,2],[-60,4],[-65,1],[-70,2],[-76,4],[-80,8]],
+    // ── Europe (west) ──
+    [[-10,36],[0,36],[8,44],[16,46],[24,46],[28,42],[30,36],[28,32],[20,34],[12,38],[8,38],[0,44],[-4,44],[-8,44],[-10,44],[-8,36],[-10,36]],
+    // Scandinavia
+    [[4,58],[8,58],[14,56],[18,58],[28,70],[24,72],[18,70],[14,66],[8,62],[4,58]],
+    // UK
+    [[-4,50],[0,50],[2,52],[0,54],[-2,56],[-4,58],[-6,56],[-4,54],[-4,52],[-4,50]],
+    // Iceland
+    [[-24,64],[-14,64],[-12,66],[-18,68],[-24,66],[-24,64]],
+    // ── Africa ──
+    [[-16,16],[-14,10],[-14,6],[-10,4],[-8,4],[-2,4],[4,4],[8,2],[10,-2],[12,-6],[14,-12],[16,-18],[18,-24],[20,-30],[18,-34],[22,-34],[28,-30],[32,-26],[34,-22],[36,-14],[40,-10],[44,-12],[40,-8],[38,0],[42,6],[44,12],[42,16],[36,14],[34,20],[32,26],[30,30],[28,34],[24,36],[18,36],[10,36],[4,36],[0,30],[-4,24],[-10,20],[-14,18],[-16,16]],
     // Madagascar
-    "M 198,88 L 204,84 L 208,90 L 206,102 L 200,106 L 195,100 L 194,92 Z",
-  ];
+    [[44,-14],[50,-14],[50,-22],[44,-26],[44,-18],[44,-14]],
+    // ── Asia (west + Russia) ──
+    [[28,42],[36,42],[42,38],[48,32],[54,28],[58,24],[60,20],[68,22],[76,24],[80,28],[84,28],[88,28],[92,26],[96,24],[100,22],[104,20],[108,18],[110,20],[112,22],[116,20],[120,22],[122,24],[124,28],[128,32],[132,36],[136,40],[140,42],[142,46],[140,50],[136,54],[130,56],[124,54],[120,50],[116,48],[110,48],[104,52],[100,56],[96,60],[90,64],[86,68],[80,72],[70,68],[60,68],[54,66],[50,62],[46,58],[40,56],[36,52],[32,48],[28,42]],
+    // Arabian peninsula
+    [[36,14],[40,12],[44,12],[50,12],[54,16],[58,20],[56,24],[52,26],[48,28],[44,26],[40,20],[36,18],[36,14]],
+    // Indian subcontinent
+    [[68,22],[72,22],[76,20],[80,14],[80,8],[78,8],[76,10],[72,16],[68,22]],
+    // Sri Lanka
+    [[80,8],[82,8],[82,6],[80,6],[80,8]],
+    // Southeast Asia mainland
+    [[100,22],[104,20],[104,10],[100,4],[100,2],[104,2],[106,6],[108,12],[108,16],[104,20],[100,22]],
+    // Malay peninsula + Sumatra
+    [[104,2],[104,-2],[106,-6],[108,-8],[108,-2],[108,2],[104,2]],
+    // Java
+    [[106,-6],[108,-8],[112,-8],[116,-8],[114,-6],[110,-6],[106,-6]],
+    // Borneo
+    [[108,-2],[116,-2],[118,2],[116,4],[112,4],[108,2],[108,-2]],
+    // Philippines
+    [[120,16],[122,18],[124,14],[122,10],[120,10],[120,16]],
+    // Japan (Honshu)
+    [[130,32],[132,34],[134,36],[138,38],[140,40],[142,38],[140,36],[136,34],[132,34],[130,32]],
+    // Japan (Hokkaido)
+    [[140,42],[142,44],[144,44],[144,42],[142,42],[140,42]],
+    // Taiwan
+    [[120,22],[122,24],[122,22],[120,22]],
+    // ── Australia ──
+    [[114,-22],[118,-20],[122,-18],[128,-14],[132,-12],[136,-12],[138,-14],[136,-16],[134,-20],[130,-22],[128,-24],[124,-28],[120,-34],[116,-34],[114,-32],[114,-26],[114,-22]],
+    [[136,-36],[140,-36],[144,-38],[148,-38],[152,-26],[148,-18],[144,-14],[140,-18],[136,-26],[134,-30],[136,-36]],
+    // Tasmania
+    [[144,-42],[148,-44],[146,-44],[144,-42]],
+    // New Zealand (North)
+    [[172,-36],[174,-38],[178,-38],[178,-36],[174,-36],[172,-36]],
+    // New Zealand (South)
+    [[168,-44],[170,-46],[172,-46],[172,-44],[170,-42],[168,-44]],
+    // ── Antarctica ──
+    [[-180,-70],[-120,-70],[-60,-70],[0,-70],[60,-70],[120,-70],[180,-70],[180,-90],[-180,-90],[-180,-70]],
+  ]
+
+  function buildGlobeSVG() {
+    let markup = '<rect width="360" height="180" fill="#0a1220"/>';
+    // Graticule
+    for (let x = 0; x <= 360; x += 30)
+      markup += `<line x1="${x}" y1="0" x2="${x}" y2="180" stroke="rgba(255,255,255,0.03)" stroke-width="0.4"/>`;
+    for (let y = 0; y <= 180; y += 30)
+      markup += `<line x1="0" y1="${y}" x2="360" y2="${y}" stroke="rgba(255,255,255,0.03)" stroke-width="0.4"/>`;
+    // Equator
+    markup += `<line x1="0" y1="90" x2="360" y2="90" stroke="rgba(126,184,201,0.12)" stroke-width="0.7"/>`;
+    // Land
+    LAND_POLYS.forEach(poly => {
+      const pts = poly.map(([lon,lat]) => ll(lon,lat)).join(' ');
+      markup += `<polygon points="${pts}" fill="rgba(126,184,201,0.2)" stroke="rgba(126,184,201,0.35)" stroke-width="0.4" stroke-linejoin="round"/>`;
+    });
+    return markup;
+  }
+
+  // Cache the static SVG markup — only build once
+  let globeMarkupCache = null;
 
   function renderGlobe(lat, lon) {
     const svg = document.getElementById('globeSvg');
     const dot = document.getElementById('globeDot');
 
-    // Draw landmasses
-    let markup = '';
-    // Ocean background (drawn via CSS on the SVG element itself via a rect)
-    markup += `<rect width="360" height="180" fill="#0d1520"/>`;
-    // Graticule lines
-    for (let x = 0; x <= 360; x += 60)
-      markup += `<line x1="${x}" y1="0" x2="${x}" y2="180" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>`;
-    for (let y = 0; y <= 180; y += 45)
-      markup += `<line x1="0" y1="${y}" x2="360" y2="${y}" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>`;
-    // Equator highlight
-    markup += `<line x1="0" y1="90" x2="360" y2="90" stroke="rgba(126,184,201,0.1)" stroke-width="0.8"/>`;
+    if (!globeMarkupCache) globeMarkupCache = buildGlobeSVG();
+    svg.innerHTML = globeMarkupCache;
 
-    LAND_PATHS.forEach(d => {
-      markup += `<path d="${d}" fill="rgba(126,184,201,0.18)" stroke="rgba(126,184,201,0.3)" stroke-width="0.5"/>`;
-    });
-
-    svg.innerHTML = markup;
-
-    // Convert lat/lon → pixel position within the 90×90 rendered globe-wrap
-    // equirectangular: x = (lon+180)/360 * W,  y = (90-lat)/180 * H
+    // Equirectangular projection
     const pctX = (lon + 180) / 360;
     const pctY = (90 - lat)  / 180;
 
@@ -1424,6 +1477,266 @@
     dot.style.display = 'block';
     dot.style.left    = `${pctX * 100}%`;
     dot.style.top     = `${pctY * 100}%`;
+  }
+
+  // ══════════════════════════════════════════════
+  // PARTICLE WEATHER SYSTEM
+  // ══════════════════════════════════════════════
+  const canvas  = document.getElementById('weatherCanvas');
+  const ctx     = canvas.getContext('2d');
+  let particles = [];
+  let animId    = null;
+  let currentFx = null;
+
+  function resizeCanvas() {
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+
+  // Weather condition ID → effect name
+  function getEffect(id) {
+    if (id >= 200 && id < 300) return 'storm';
+    if (id >= 300 && id < 400) return 'drizzle';
+    if (id >= 500 && id < 600) return 'rain';
+    if (id >= 600 && id < 700) return 'snow';
+    if (id >= 700 && id < 800) return 'mist';
+    if (id === 800)             return 'clear';
+    if (id === 801)             return 'clear';
+    if (id >= 802 && id < 900) return 'clouds';
+    return null;
+  }
+
+  // Body background themes
+  const BG_THEMES = {
+    clear:   'radial-gradient(ellipse 80% 60% at 50% 0%, #1a2a4a 0%, #0b0e17 60%)',
+    clouds:  'radial-gradient(ellipse 80% 60% at 50% 0%, #1a1e2a 0%, #0b0e17 60%)',
+    rain:    'radial-gradient(ellipse 80% 60% at 50% 0%, #0d1520 0%, #080c14 60%)',
+    drizzle: 'radial-gradient(ellipse 80% 60% at 50% 0%, #0e1822 0%, #0b0e17 60%)',
+    storm:   'radial-gradient(ellipse 80% 60% at 50% 0%, #080b12 0%, #05070f 60%)',
+    snow:    'radial-gradient(ellipse 80% 60% at 50% 0%, #141c28 0%, #0b0e17 60%)',
+    mist:    'radial-gradient(ellipse 80% 60% at 50% 0%, #111820 0%, #0b0e17 60%)',
+  };
+
+  class Particle {
+    constructor(fx) {
+      this.fx = fx;
+      this.reset(true);
+    }
+
+    reset(initial = false) {
+      const W = canvas.width, H = canvas.height;
+      switch (this.fx) {
+        case 'rain':
+        case 'storm':
+          this.x    = Math.random() * W;
+          this.y    = initial ? Math.random() * H : -20;
+          this.len  = this.fx === 'storm' ? 18 + Math.random() * 14 : 10 + Math.random() * 10;
+          this.spd  = this.fx === 'storm' ? 18 + Math.random() * 12 : 10 + Math.random() * 8;
+          this.ang  = this.fx === 'storm' ? 0.4 : 0.18; // radians from vertical
+          this.alpha= 0.3 + Math.random() * 0.4;
+          break;
+        case 'drizzle':
+          this.x    = Math.random() * W;
+          this.y    = initial ? Math.random() * H : -10;
+          this.len  = 4 + Math.random() * 6;
+          this.spd  = 3 + Math.random() * 3;
+          this.ang  = 0.05;
+          this.alpha= 0.2 + Math.random() * 0.25;
+          break;
+        case 'snow':
+          this.x    = Math.random() * W;
+          this.y    = initial ? Math.random() * H : -10;
+          this.r    = 1.5 + Math.random() * 2.5;
+          this.spd  = 0.6 + Math.random() * 1.0;
+          this.drift= (Math.random() - 0.5) * 0.4;
+          this.wobble= Math.random() * Math.PI * 2;
+          this.alpha= 0.5 + Math.random() * 0.5;
+          break;
+        case 'mist':
+          this.x    = Math.random() * W;
+          this.y    = Math.random() * H;
+          this.r    = 80 + Math.random() * 140;
+          this.spd  = 0.08 + Math.random() * 0.12;
+          this.alpha= 0;
+          this.targetAlpha = 0.04 + Math.random() * 0.04;
+          this.dir  = Math.random() < 0.5 ? 1 : -1;
+          break;
+        case 'clouds':
+          this.x    = -200;
+          this.y    = Math.random() * H * 0.4;
+          this.r    = 60 + Math.random() * 80;
+          this.spd  = 0.15 + Math.random() * 0.2;
+          this.alpha= 0.04 + Math.random() * 0.04;
+          break;
+      }
+    }
+
+    update() {
+      const W = canvas.width, H = canvas.height;
+      switch (this.fx) {
+        case 'rain':
+        case 'storm':
+        case 'drizzle':
+          this.x += Math.sin(this.ang) * this.spd;
+          this.y += Math.cos(this.ang) * this.spd;
+          if (this.y > H + 20) this.reset();
+          break;
+        case 'snow':
+          this.wobble += 0.02;
+          this.x += Math.sin(this.wobble) * 0.5 + this.drift;
+          this.y += this.spd;
+          if (this.y > H + 10) this.reset();
+          if (this.x < -10) this.x = W + 10;
+          if (this.x > W + 10) this.x = -10;
+          break;
+        case 'mist':
+          this.x += this.spd * this.dir;
+          this.alpha += (this.targetAlpha - this.alpha) * 0.005;
+          if (this.x > W + this.r || this.x < -this.r) {
+            this.x   = this.dir > 0 ? -this.r : W + this.r;
+            this.y   = Math.random() * H;
+            this.targetAlpha = 0.03 + Math.random() * 0.04;
+          }
+          break;
+        case 'clouds':
+          this.x += this.spd;
+          if (this.x > W + 200) this.reset();
+          break;
+      }
+    }
+
+    draw() {
+      ctx.save();
+      switch (this.fx) {
+        case 'rain':
+        case 'drizzle': {
+          ctx.globalAlpha = this.alpha;
+          ctx.strokeStyle = '#a8cfe0';
+          ctx.lineWidth   = this.fx === 'drizzle' ? 0.6 : 0.8;
+          ctx.beginPath();
+          ctx.moveTo(this.x, this.y);
+          ctx.lineTo(this.x + Math.sin(this.ang) * this.len, this.y + Math.cos(this.ang) * this.len);
+          ctx.stroke();
+          break;
+        }
+        case 'storm': {
+          ctx.globalAlpha = this.alpha;
+          ctx.strokeStyle = '#8ab8d4';
+          ctx.lineWidth   = 1;
+          ctx.beginPath();
+          ctx.moveTo(this.x, this.y);
+          ctx.lineTo(this.x + Math.sin(this.ang) * this.len, this.y + Math.cos(this.ang) * this.len);
+          ctx.stroke();
+          break;
+        }
+        case 'snow': {
+          ctx.globalAlpha = this.alpha;
+          ctx.fillStyle   = '#ddeeff';
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+          ctx.fill();
+          break;
+        }
+        case 'mist':
+        case 'clouds': {
+          const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.r);
+          grad.addColorStop(0, `rgba(160,185,210,${this.alpha})`);
+          grad.addColorStop(1, 'rgba(160,185,210,0)');
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+          ctx.fill();
+          break;
+        }
+      }
+      ctx.restore();
+    }
+  }
+
+  // Lightning flash for storms
+  let lightningTimer = 0;
+  let flashAlpha     = 0;
+
+  function drawLightning() {
+    if (currentFx !== 'storm') return;
+    lightningTimer--;
+    if (lightningTimer <= 0) {
+      lightningTimer = 120 + Math.random() * 300;
+      flashAlpha = 0.18;
+      // Draw a jagged bolt
+      ctx.save();
+      ctx.strokeStyle = `rgba(220,230,255,0.7)`;
+      ctx.lineWidth   = 1.5;
+      ctx.shadowColor = '#aad4ff';
+      ctx.shadowBlur  = 12;
+      ctx.beginPath();
+      let bx = canvas.width  * (0.2 + Math.random() * 0.6);
+      let by = 0;
+      ctx.moveTo(bx, by);
+      for (let i = 0; i < 8; i++) {
+        bx += (Math.random() - 0.5) * 80;
+        by += canvas.height / 8;
+        ctx.lineTo(bx, by);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+    if (flashAlpha > 0) {
+      ctx.save();
+      ctx.fillStyle = `rgba(200,220,255,${flashAlpha})`;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.restore();
+      flashAlpha *= 0.75;
+    }
+  }
+
+  function particleCount(fx) {
+    const W = canvas.width;
+    switch (fx) {
+      case 'rain':    return Math.floor(W / 6);
+      case 'storm':   return Math.floor(W / 4);
+      case 'drizzle': return Math.floor(W / 10);
+      case 'snow':    return Math.floor(W / 8);
+      case 'mist':    return 12;
+      case 'clouds':  return 8;
+      default:        return 0;
+    }
+  }
+
+  function startParticles(fx) {
+    if (animId) { cancelAnimationFrame(animId); animId = null; }
+    currentFx  = fx;
+    particles  = [];
+    lightningTimer = 0;
+    flashAlpha     = 0;
+
+    if (!fx || fx === 'clear') {
+      canvas.classList.remove('active');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      return;
+    }
+
+    const count = particleCount(fx);
+    for (let i = 0; i < count; i++) particles.push(new Particle(fx));
+
+    canvas.classList.add('active');
+
+    function loop() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (fx === 'storm') drawLightning();
+      particles.forEach(p => { p.update(); p.draw(); });
+      animId = requestAnimationFrame(loop);
+    }
+    loop();
+  }
+
+  function applyWeatherTheme(id) {
+    const fx = getEffect(id);
+    startParticles(fx);
+    const bgKey = fx && BG_THEMES[fx] ? fx : null;
+    document.body.style.background = bgKey ? BG_THEMES[bgKey] : '';
   }
 
   window.addEventListener('DOMContentLoaded', () => {
