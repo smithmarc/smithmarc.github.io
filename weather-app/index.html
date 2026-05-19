@@ -1229,7 +1229,7 @@
       cur._geoCountry = country || cur.sys.country;
       lastCity = `${lat},${lon}`;
 
-      renderWeather(cur);
+      renderWeather(cur, fcast);
       renderForecast(fcast, cur.timezone);
       fetchHistory(lat, lon);
       renderGlobe(lat, lon);
@@ -1269,7 +1269,7 @@
         return;
       }
 
-      renderWeather(cur);
+      renderWeather(cur, fcast);
       renderForecast(fcast, cur.timezone);
       fetchHistory(cur.coord.lat, cur.coord.lon);
       renderGlobe(cur.coord.lat, cur.coord.lon);
@@ -1284,7 +1284,7 @@
   function fetchWeather(city) { fetchWeatherByQuery(city || searchInput.value.trim()); }
 
   // ── Current weather ──
-  function renderWeather(d) {
+  function renderWeather(d, fcast) {
     const ul = unitLabel(), sl = speedLabel(), tz = d.timezone;
 
     document.getElementById('cityName').textContent       = d._geoName    || d.name;
@@ -1306,8 +1306,14 @@
     document.getElementById('visibility').textContent     = d.visibility ? `${(d.visibility/1000).toFixed(1)} km` : 'N/A';
     document.getElementById('pressure').textContent       = `${d.main.pressure} hPa`;
     document.getElementById('clouds').textContent         = `${d.clouds.all}%`;
-    document.getElementById('tempLow').textContent        = `${Math.round(d.main.temp_min)}${ul}`;
-    document.getElementById('tempHigh').textContent       = `${Math.round(d.main.temp_max)}${ul}`;
+    // Derive today's true high/low from today's forecast slots
+    const tzOffset   = d.timezone;
+    const todayKey   = (() => { const ld = new Date((d.dt + tzOffset)*1000); return `${ld.getUTCFullYear()}-${ld.getUTCMonth()}-${ld.getUTCDate()}`; })();
+    const todaySlots = fcast && fcast.list ? fcast.list.filter(s => { const ld = new Date((s.dt + tzOffset)*1000); return `${ld.getUTCFullYear()}-${ld.getUTCMonth()}-${ld.getUTCDate()}` === todayKey; }) : [];
+    const dayHigh    = todaySlots.length ? Math.round(Math.max(...todaySlots.map(s => s.main.temp_max))) : Math.round(d.main.temp_max);
+    const dayLow     = todaySlots.length ? Math.round(Math.min(...todaySlots.map(s => s.main.temp_min))) : Math.round(d.main.temp_min);
+    document.getElementById('tempLow').textContent        = `${dayLow}${ul}`;
+    document.getElementById('tempHigh').textContent       = `${dayHigh}${ul}`;
     document.getElementById('sunrise').textContent        = formatTime(d.sys.sunrise, tz);
     document.getElementById('sunset').textContent         = formatTime(d.sys.sunset, tz);
 
