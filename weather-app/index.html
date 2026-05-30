@@ -32,6 +32,7 @@
       padding: 48px 24px 80px;
       position: relative;
       overflow-x: hidden;
+      transition: background 2s ease;
     }
 
     body::before {
@@ -735,16 +736,7 @@
 
     #weatherCanvas.active { opacity: 1; }
 
-    /* ── Weather theme transitions on body ── */
-    body {
-      transition: background 2s ease;
-    }
-
     /* ── City autocomplete dropdown ── */
-    .search-wrap {
-      position: relative;
-    }
-
     .search-dropdown {
       position: absolute;
       top: calc(100% + 6px);
@@ -1007,8 +999,14 @@
 </div>
 
 <script>
-  let unit     = 'metric';
-  let lastCity = '';
+  // ── Shared constants ──
+  const DAYS   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const DAYS_FULL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  let unit       = 'metric';
+  let lastCity   = '';
+  let lastCoords = null; // { lat, lon } for unit re-fetch
   let apiKey   = localStorage.getItem('owm_api_key') || '';
 
   if (apiKey) {
@@ -1029,7 +1027,14 @@
     unit = u;
     document.getElementById('btnC').classList.toggle('active', u === 'metric');
     document.getElementById('btnF').classList.toggle('active', u === 'imperial');
-    if (lastCity) fetchWeather(lastCity);
+    if (lastCoords) {
+      fetchWeatherByCoords(lastCoords.lat, lastCoords.lon,
+        document.getElementById('cityName').textContent,
+        document.getElementById('countryName').textContent.split(',')[0],
+        document.getElementById('countryName').textContent.split(',').pop().trim());
+    } else if (lastCity) {
+      fetchWeatherByQuery(lastCity);
+    }
   }
 
   function showTab(tab) {
@@ -1048,8 +1053,8 @@
   function setLoading(on) {
     document.getElementById('loadingCard').style.display = on ? 'block' : 'none';
     if (on) {
+      document.getElementById('globeSection').style.display = 'none';
       ['weatherCard','forecastCard','historyCard'].forEach(id => {
-        document.getElementById('globeSection').style.display = 'none';
         const el = document.getElementById(id);
         el.classList.remove('visible');
         el.style.display = 'none';
@@ -1068,9 +1073,7 @@
 
   function formatDateTime(unix, offset) {
     const d = new Date((unix + offset) * 1000);
-    const days   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    return `${days[d.getUTCDay()]} ${d.getUTCDate()} ${months[d.getUTCMonth()]}\n${formatTime(unix, offset)}`;
+    return `${DAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}\n${formatTime(unix, offset)}`;
   }
 
   function conditionToEmoji(id, icon) {
@@ -1089,7 +1092,6 @@
   const unitLabel  = () => unit === 'metric' ? '°C' : '°F';
   const speedLabel = () => unit === 'metric' ? 'm/s' : 'mph';
 
-  // ── Fetch current + forecast in parallel ──
   // ── Autocomplete ──
   let acDebounce  = null;
   let acResults   = [];
@@ -1176,12 +1178,33 @@
       const item = document.createElement('div');
       item.className = 'dropdown-item';
       item.dataset.index = i;
-      item.innerHTML = `
-        <div class="dropdown-item-left">
-          <div class="dropdown-city">${r.name}${r.local_names && r.local_names.en && r.local_names.en !== r.name ? ' <span style="opacity:0.5;font-size:0.75em">/ ' + r.local_names.en + '</span>' : ''}</div>
-          <div class="dropdown-region">${region}</div>
-        </div>
-        <div class="dropdown-coords">${latStr}, ${lonStr}</div>`;
+
+      const left   = document.createElement('div');
+      left.className = 'dropdown-item-left';
+
+      const cityEl = document.createElement('div');
+      cityEl.className = 'dropdown-city';
+      cityEl.textContent = r.name;
+      if (r.local_names && r.local_names.en && r.local_names.en !== r.name) {
+        const alt = document.createElement('span');
+        alt.style.cssText = 'opacity:0.5;font-size:0.75em';
+        alt.textContent = ` / ${r.local_names.en}`;
+        cityEl.appendChild(alt);
+      }
+
+      const regionEl = document.createElement('div');
+      regionEl.className = 'dropdown-region';
+      regionEl.textContent = region;
+
+      left.appendChild(cityEl);
+      left.appendChild(regionEl);
+
+      const coordEl = document.createElement('div');
+      coordEl.className = 'dropdown-coords';
+      coordEl.textContent = `${latStr}, ${lonStr}`;
+
+      item.appendChild(left);
+      item.appendChild(coordEl);
 
       item.addEventListener('mouseenter', () => {
         acIndex = i;
@@ -1227,7 +1250,8 @@
       cur._geoName    = name;
       cur._geoState   = state  || '';
       cur._geoCountry = country || cur.sys.country;
-      lastCity = `${lat},${lon}`;
+      lastCity   = `${lat},${lon}`;
+      lastCoords = { lat, lon };
 
       renderWeather(cur, fcast);
       renderForecast(fcast, cur.timezone);
@@ -1269,6 +1293,7 @@
         return;
       }
 
+      lastCoords = { lat: cur.coord.lat, lon: cur.coord.lon };
       renderWeather(cur, fcast);
       renderForecast(fcast, cur.timezone);
       fetchHistory(cur.coord.lat, cur.coord.lon);
@@ -1307,9 +1332,8 @@
     document.getElementById('pressure').textContent       = `${d.main.pressure} hPa`;
     document.getElementById('clouds').textContent         = `${d.clouds.all}%`;
     // Derive today's true high/low from today's forecast slots
-    const tzOffset   = d.timezone;
-    const todayKey   = (() => { const ld = new Date((d.dt + tzOffset)*1000); return `${ld.getUTCFullYear()}-${ld.getUTCMonth()}-${ld.getUTCDate()}`; })();
-    const todaySlots = fcast && fcast.list ? fcast.list.filter(s => { const ld = new Date((s.dt + tzOffset)*1000); return `${ld.getUTCFullYear()}-${ld.getUTCMonth()}-${ld.getUTCDate()}` === todayKey; }) : [];
+    const todayKey   = (() => { const ld = new Date((d.dt + tz)*1000); return `${ld.getUTCFullYear()}-${ld.getUTCMonth()}-${ld.getUTCDate()}`; })();
+    const todaySlots = fcast && fcast.list ? fcast.list.filter(s => { const ld = new Date((s.dt + tz)*1000); return `${ld.getUTCFullYear()}-${ld.getUTCMonth()}-${ld.getUTCDate()}` === todayKey; }) : [];
     const dayHigh    = todaySlots.length ? Math.round(Math.max(...todaySlots.map(s => s.main.temp_max))) : Math.round(d.main.temp_max);
     const dayLow     = todaySlots.length ? Math.round(Math.min(...todaySlots.map(s => s.main.temp_min))) : Math.round(d.main.temp_min);
     document.getElementById('tempLow').textContent        = `${dayLow}${ul}`;
@@ -1332,9 +1356,6 @@
     // Group by local calendar day
     const dayMap   = {};
     const dayOrder = [];
-    const DAYS   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-    const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-
     list.forEach(slot => {
       const ld  = new Date((slot.dt + tzOffset) * 1000);
       const key = `${ld.getUTCFullYear()}-${ld.getUTCMonth()}-${ld.getUTCDate()}`;
@@ -1362,7 +1383,7 @@
       row.className = 'forecast-row';
       row.innerHTML = `
         <div class="forecast-day">
-          ${DAYS[date.getUTCDay()].slice(0,3)}
+          ${DAYS_FULL[date.getUTCDay()].slice(0,3)}
           <div class="date-sub">${date.getUTCDate()} ${MONTHS[date.getUTCMonth()]}</div>
         </div>
         <div class="forecast-condition">
@@ -1490,7 +1511,7 @@
 
     const xPos  = i => PAD.left + (i / (n - 1)) * chartW;
     const yTemp = v => PAD.top + (1 - (v - minTemp) / tempRange) * chartH;
-    const yPrec = v => PAD.top + chartH - (v / maxPrecip) * chartH * 0.35;
+    const PRECIP_MAX_FRAC = 0.35; // precip bars occupy max 35% of chart height
 
     // Build SVG
     let svg = '';
@@ -1510,7 +1531,7 @@
     const barW = Math.max(2, (chartW / n) * 0.5);
     precip.forEach((p, i) => {
       if (p == null || p <= 0) return;
-      const bH = Math.max(2, (p / maxPrecip) * chartH * 0.35);
+      const bH = Math.max(2, (p / maxPrecip) * chartH * PRECIP_MAX_FRAC);
       const bX = xPos(i) - barW / 2;
       const bY = PAD.top + chartH - bH;
       svg += `<rect x="${bX}" y="${bY}" width="${barW}" height="${bH}"
@@ -1574,8 +1595,8 @@
         const svgW  = chartEl.getBoundingClientRect().width;
         const scale = svgW / W;
         const px    = xPos(i) * scale;
-        const tipW  = 110;
-        const left  = px + tipW + 12 > svgW ? px - tipW - 8 : px + 8;
+        const TOOLTIP_W = 110;
+        const left  = px + TOOLTIP_W + 12 > svgW ? px - TOOLTIP_W - 8 : px + 8;
         tooltip.style.left = `${left}px`;
         tooltip.style.top  = '20px';
         tooltip.classList.add('visible');
