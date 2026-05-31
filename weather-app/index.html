@@ -810,6 +810,176 @@
       color: var(--muted);
       letter-spacing: 0.08em;
     }
+
+    /* ── Outfit / Activity Suggester ── */
+    .suggest-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      margin-top: 16px;
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity 0.6s ease 0.3s, transform 0.6s ease 0.3s;
+      display: none;
+      overflow: hidden;
+    }
+
+    .suggest-card.visible { opacity: 1; transform: translateY(0); display: block; }
+
+    .suggest-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 28px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .suggest-title {
+      font-size: 0.62rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .suggest-refresh {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 5px 12px;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.6rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .suggest-refresh:hover { color: var(--accent2); border-color: rgba(126,184,201,0.4); }
+
+    .suggest-refresh svg {
+      width: 11px;
+      height: 11px;
+      transition: transform 0.5s ease;
+    }
+
+    .suggest-refresh.spinning svg { transform: rotate(360deg); }
+
+    .suggest-body { padding: 24px 28px 28px; }
+
+    .suggest-loading {
+      padding: 32px 28px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.68rem;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+    }
+
+    /* Category chips */
+    .suggest-chips {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .suggest-chip {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 5px 12px;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.6rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s, border-color 0.2s;
+    }
+
+    .suggest-chip.active {
+      background: rgba(200,169,110,0.12);
+      color: var(--accent);
+      border-color: rgba(200,169,110,0.35);
+    }
+
+    .suggest-chip:hover:not(.active) { color: var(--text); border-color: rgba(255,255,255,0.2); }
+
+    /* Suggestion content */
+    .suggest-content {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .suggest-emoji-wrap {
+      width: 56px;
+      height: 56px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      flex-shrink: 0;
+    }
+
+    .suggest-text { display: flex; flex-direction: column; gap: 10px; }
+
+    .suggest-headline {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.3rem;
+      font-weight: 300;
+      line-height: 1.2;
+      letter-spacing: 0.02em;
+      color: var(--text);
+    }
+
+    .suggest-detail {
+      font-size: 0.72rem;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+      line-height: 1.7;
+    }
+
+    /* Tags */
+    .suggest-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .suggest-tag {
+      font-size: 0.58rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 2px;
+      background: rgba(126,184,201,0.08);
+      color: var(--accent2);
+      border: 1px solid rgba(126,184,201,0.15);
+    }
+
+    .suggest-error {
+      padding: 20px 28px;
+      font-size: 0.72rem;
+      color: var(--red);
+      letter-spacing: 0.04em;
+    }
+
+    @media (max-width: 480px) {
+      .suggest-header, .suggest-body, .suggest-loading { padding-left: 20px; padding-right: 20px; }
+      .suggest-content { grid-template-columns: 1fr; }
+      .suggest-emoji-wrap { width: 44px; height: 44px; font-size: 1.4rem; }
+    }
   </style>
 </head>
 <body>
@@ -823,11 +993,17 @@
   </header>
 
   <div class="api-notice" id="apiNotice">
-    <strong>Setup required.</strong> This app uses the <strong>OpenWeatherMap API</strong> (free tier).<br>
-    Get your key at <code>openweathermap.org/api</code> → sign up → copy your key below.
+    <strong>Setup required.</strong> This app uses two APIs — both are free to get started.<br><br>
+    <strong style="color:var(--accent)">1. OpenWeatherMap</strong> — get a free key at <code>openweathermap.org/api</code>
     <div class="api-key-wrap">
-      <input class="api-key-input" id="apiKeyInput" type="password" placeholder="Paste your API key here…" />
-      <button class="api-key-save" onclick="saveApiKey()">Save key</button>
+      <input class="api-key-input" id="apiKeyInput" type="password" placeholder="OpenWeatherMap API key…" />
+      <button class="api-key-save" onclick="saveOwmKey()">Save</button>
+    </div>
+    <br>
+    <strong style="color:var(--accent)">2. Anthropic</strong> — get a key at <code>console.anthropic.com</code> (powers the outfit &amp; activity suggester)
+    <div class="api-key-wrap">
+      <input class="api-key-input" id="anthropicKeyInput" type="password" placeholder="Anthropic API key…" />
+      <button class="api-key-save" onclick="saveAnthropicKey()">Save</button>
     </div>
   </div>
 
@@ -996,6 +1172,38 @@
     </div>
   </div>
 
+
+  <!-- Outfit / Activity Suggester card -->
+  <div class="suggest-card" id="suggestCard">
+    <div class="suggest-header">
+      <div class="suggest-title">Today's Suggestions</div>
+      <button class="suggest-refresh" id="suggestRefresh" onclick="runSuggester()" title="Refresh">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M23 4v6h-6M1 20v-6h6"/>
+          <path d="M3.51 9a9 9 0 0 1 14.36-3.36L23 10M1 14l5.13 4.36A9 9 0 0 0 20.49 15"/>
+        </svg>
+        Refresh
+      </button>
+    </div>
+    <div class="suggest-loading" id="suggestLoading">
+      <div class="spin"></div> Asking Claude for suggestions…
+    </div>
+    <div id="suggestBody" style="display:none;">
+      <div class="suggest-body">
+        <div class="suggest-chips" id="suggestChips"></div>
+        <div class="suggest-content">
+          <div class="suggest-emoji-wrap" id="suggestEmoji">—</div>
+          <div class="suggest-text">
+            <div class="suggest-headline" id="suggestHeadline">—</div>
+            <div class="suggest-detail" id="suggestDetail">—</div>
+            <div class="suggest-tags" id="suggestTags"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="suggest-error" id="suggestError" style="display:none;"></div>
+  </div>
+
 </div>
 
 <script>
@@ -1007,20 +1215,35 @@
   let unit       = 'metric';
   let lastCity   = '';
   let lastCoords = null; // { lat, lon } for unit re-fetch
-  let apiKey   = localStorage.getItem('owm_api_key') || '';
+  let apiKey          = localStorage.getItem('owm_api_key')       || '';
+  let anthropicKey    = localStorage.getItem('anthropic_api_key') || '';
 
-  if (apiKey) {
-    document.getElementById('apiKeyInput').value = apiKey;
-    document.getElementById('apiNotice').style.display = 'none';
+  function updateNoticeVisibility() {
+    // Hide notice only when both keys are saved
+    if (apiKey && anthropicKey) {
+      document.getElementById('apiNotice').style.display = 'none';
+    }
   }
 
-  function saveApiKey() {
+  if (apiKey)       document.getElementById('apiKeyInput').value       = apiKey;
+  if (anthropicKey) document.getElementById('anthropicKeyInput').value = anthropicKey;
+  updateNoticeVisibility();
+
+  function saveOwmKey() {
     const val = document.getElementById('apiKeyInput').value.trim();
     if (!val) return;
     apiKey = val;
     localStorage.setItem('owm_api_key', val);
-    document.getElementById('apiNotice').style.display = 'none';
+    updateNoticeVisibility();
     showError('');
+  }
+
+  function saveAnthropicKey() {
+    const val = document.getElementById('anthropicKeyInput').value.trim();
+    if (!val) return;
+    anthropicKey = val;
+    localStorage.setItem('anthropic_api_key', val);
+    updateNoticeVisibility();
   }
 
   function setUnit(u) {
@@ -1054,6 +1277,8 @@
     document.getElementById('loadingCard').style.display = on ? 'block' : 'none';
     if (on) {
       document.getElementById('globeSection').style.display = 'none';
+      document.getElementById('suggestCard').classList.remove('visible');
+      document.getElementById('suggestCard').style.display = 'none';
       ['weatherCard','forecastCard','historyCard'].forEach(id => {
         const el = document.getElementById(id);
         el.classList.remove('visible');
@@ -1342,6 +1567,21 @@
     document.getElementById('sunset').textContent         = formatTime(d.sys.sunset, tz);
 
     applyWeatherTheme(d.weather[0].id);
+
+    // Snapshot for suggester
+    currentWeatherSnapshot = {
+      city:       d._geoName    || d.name,
+      condition:  d.weather[0].description,
+      temp:       Math.round(d.main.temp),
+      feelsLike:  Math.round(d.main.feels_like),
+      high:       dayHigh,
+      low:        dayLow,
+      humidity:   d.main.humidity,
+      wind:       d.wind.speed,
+      timeOfDay:  getTimeOfDay(),
+    };
+    runSuggester();
+
     setLoading(false);
     const card = document.getElementById('weatherCard');
     card.style.display = 'block';
@@ -1998,6 +2238,180 @@
     startParticles(fx);
     const bgKey = fx && BG_THEMES[fx] ? fx : null;
     document.body.style.background = bgKey ? BG_THEMES[bgKey] : '';
+  }
+
+
+  // ══════════════════════════════════════════════
+  // OUTFIT / ACTIVITY SUGGESTER — powered by Claude
+  // ══════════════════════════════════════════════
+  let suggestData    = null; // cached parsed suggestions { outfit, activity, dining, mood }
+  let suggestCategory = 'outfit';
+  let currentWeatherSnapshot = null; // weather context for the prompt
+
+  const SUGGEST_CATEGORIES = [
+    { key: 'outfit',   label: 'Outfit',   },
+    { key: 'activity', label: 'Activity', },
+    { key: 'dining',   label: 'Dining',   },
+    { key: 'mood',     label: 'Vibe',     },
+  ];
+
+  function buildSuggestPrompt(w) {
+    const ul = unitLabel();
+    const sl = speedLabel();
+    return `You are a witty, concise lifestyle assistant embedded in a weather app.
+
+Given the current weather conditions below, generate suggestions in exactly 4 categories: outfit, activity, dining, and mood/vibe.
+
+Weather:
+- Location: ${w.city}
+- Condition: ${w.condition}
+- Temperature: ${w.temp}${ul} (feels like ${w.feelsLike}${ul})
+- Today's range: ${w.low}${ul} – ${w.high}${ul}
+- Humidity: ${w.humidity}%
+- Wind: ${w.wind} ${sl}
+- Time of day: ${w.timeOfDay}
+
+Respond ONLY with a valid JSON object, no markdown, no explanation. Use this exact structure:
+{
+  "outfit": {
+    "emoji": "<single emoji>",
+    "headline": "<short punchy headline, max 6 words>",
+    "detail": "<2-3 sentences of specific, practical advice with personality>",
+    "tags": ["<tag1>", "<tag2>", "<tag3>"]
+  },
+  "activity": {
+    "emoji": "<single emoji>",
+    "headline": "<short punchy headline, max 6 words>",
+    "detail": "<2-3 sentences of specific, fun activity ideas for this weather>",
+    "tags": ["<tag1>", "<tag2>", "<tag3>"]
+  },
+  "dining": {
+    "emoji": "<single emoji>",
+    "headline": "<short punchy headline, max 6 words>",
+    "detail": "<2-3 sentences about food, drink, or dining style that suits this weather>",
+    "tags": ["<tag1>", "<tag2>", "<tag3>"]
+  },
+  "mood": {
+    "emoji": "<single emoji>",
+    "headline": "<short punchy headline, max 6 words>",
+    "detail": "<2-3 sentences capturing the vibe, energy, or feeling of this weather day>",
+    "tags": ["<tag1>", "<tag2>", "<tag3>"]
+  }
+}`;
+  }
+
+  function getTimeOfDay() {
+    const h = new Date().getHours();
+    if (h < 6)  return 'night';
+    if (h < 12) return 'morning';
+    if (h < 17) return 'afternoon';
+    if (h < 21) return 'evening';
+    return 'night';
+  }
+
+  async function runSuggester() {
+    if (!currentWeatherSnapshot) return;
+    if (!anthropicKey) {
+      // Show card with a friendly prompt to add key
+      const card = document.getElementById('suggestCard');
+      card.style.display = 'block';
+      requestAnimationFrame(() => card.classList.add('visible'));
+      document.getElementById('suggestLoading').style.display = 'none';
+      document.getElementById('suggestBody').style.display    = 'none';
+      const errEl = document.getElementById('suggestError');
+      errEl.textContent = 'Add your Anthropic API key above to enable suggestions.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    // Show card + loading
+    const card = document.getElementById('suggestCard');
+    card.style.display = 'block';
+    requestAnimationFrame(() => card.classList.add('visible'));
+
+    document.getElementById('suggestLoading').style.display = 'flex';
+    document.getElementById('suggestBody').style.display    = 'none';
+    document.getElementById('suggestError').style.display   = 'none';
+
+    // Spin the refresh icon
+    const refreshBtn = document.getElementById('suggestRefresh');
+    refreshBtn.classList.add('spinning');
+    setTimeout(() => refreshBtn.classList.remove('spinning'), 500);
+
+    suggestData = null;
+
+    try {
+      const prompt = buildSuggestPrompt(currentWeatherSnapshot);
+
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': anthropicKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) throw new Error(data.error?.message || 'API error');
+
+      const raw  = data.content.map(b => b.text || '').join('');
+      const clean = raw.replace(/```json|```/g, '').trim();
+      suggestData = JSON.parse(clean);
+
+      document.getElementById('suggestLoading').style.display = 'none';
+      document.getElementById('suggestBody').style.display    = 'block';
+
+      renderSuggestChips();
+      showSuggestCategory(suggestCategory);
+
+    } catch (e) {
+      document.getElementById('suggestLoading').style.display = 'none';
+      const errEl = document.getElementById('suggestError');
+      errEl.textContent = `Could not load suggestions — ${e.message}`;
+      errEl.style.display = 'block';
+    }
+  }
+
+  function renderSuggestChips() {
+    const chips = document.getElementById('suggestChips');
+    chips.innerHTML = '';
+    SUGGEST_CATEGORIES.forEach(({ key, label }) => {
+      const btn = document.createElement('button');
+      btn.className = 'suggest-chip' + (key === suggestCategory ? ' active' : '');
+      btn.textContent = label;
+      btn.addEventListener('click', () => {
+        suggestCategory = key;
+        chips.querySelectorAll('.suggest-chip').forEach(c => c.classList.toggle('active', c.textContent === label));
+        showSuggestCategory(key);
+      });
+      chips.appendChild(btn);
+    });
+  }
+
+  function showSuggestCategory(key) {
+    if (!suggestData || !suggestData[key]) return;
+    const s = suggestData[key];
+
+    document.getElementById('suggestEmoji').textContent    = s.emoji    || '—';
+    document.getElementById('suggestHeadline').textContent = s.headline || '—';
+    document.getElementById('suggestDetail').textContent   = s.detail   || '—';
+
+    const tagsEl = document.getElementById('suggestTags');
+    tagsEl.innerHTML = '';
+    (s.tags || []).forEach(tag => {
+      const el = document.createElement('span');
+      el.className   = 'suggest-tag';
+      el.textContent = tag;
+      tagsEl.appendChild(el);
+    });
   }
 
   window.addEventListener('DOMContentLoaded', () => {
