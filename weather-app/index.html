@@ -1571,6 +1571,10 @@
     // Snapshot for suggester
     currentWeatherSnapshot = {
       city:       d._geoName    || d.name,
+      state:      d._geoState   || '',
+      country:    d._geoCountry || d.sys.country,
+      lat:        d.coord.lat,
+      lon:        d.coord.lon,
       condition:  d.weather[0].description,
       temp:       Math.round(d.main.temp),
       feelsLike:  Math.round(d.main.feels_like),
@@ -2263,7 +2267,7 @@
 Given the current weather conditions below, generate suggestions in exactly 4 categories: outfit, activity, dining, and mood/vibe.
 
 Weather:
-- Location: ${w.city}
+- Location: ${w.city}${w.state ? ", " + w.state : ""}${w.country ? ", " + w.country : ""} (coordinates: ${w.lat.toFixed(2)}°${w.lat >= 0 ? "N" : "S"}, ${Math.abs(w.lon).toFixed(2)}°${w.lon >= 0 ? "E" : "W"})
 - Condition: ${w.condition}
 - Temperature: ${w.temp}${ul} (feels like ${w.feelsLike}${ul})
 - Today's range: ${w.low}${ul} – ${w.high}${ul}
