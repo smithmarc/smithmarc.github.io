@@ -298,7 +298,7 @@ function parseMarkdown(md) {
     .replace(/^---$/gm,'<hr>')
     .replace(/^> (.+)$/gm,'<blockquote><p>$1</p></blockquote>')
     .replace(/^(\d+)\. (.+)$/gm,'<li data-ol>$2</li>')
-    .replace(/^- (.+)$/gm,'<li>$2</li>');
+    .replace(/^- (.+)$/gm,'<li>$1</li>');
 
   html = html
     .replace(/(<li data-ol>[\s\S]*?<\/li>)(\n(?!<li data-ol>)|$)/g, m =>
