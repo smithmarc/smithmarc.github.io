@@ -8,6 +8,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono:wght@400&display=swap" rel="stylesheet" />
   <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" id="hljs-light" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" id="hljs-dark" disabled />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -20,10 +23,12 @@
       --text: #1a1a18;
       --text-2: #6b6b67;
       --text-3: #a0a09c;
+      --accent: #185FA5;
       --font: 'DM Sans', system-ui, sans-serif;
       --mono: 'DM Mono', monospace;
       --radius-md: 8px;
       --radius-lg: 12px;
+      --sidebar-w: 220px;
     }
 
     @media (prefers-color-scheme: dark) {
@@ -36,7 +41,9 @@
         --text: #f0efe8;
         --text-2: #a0a09c;
         --text-3: #6b6b67;
+        --accent: #4d9de0;
       }
+      #hljs-light { disabled: true; }
     }
 
     html, body { height: 100%; }
@@ -51,27 +58,91 @@
       overflow: hidden;
     }
 
+    /* ── TABS BAR ── */
+    .tabs-bar {
+      display: flex;
+      align-items: stretch;
+      background: var(--surface-2);
+      border-bottom: 0.5px solid var(--border);
+      overflow-x: auto;
+      flex-shrink: 0;
+      scrollbar-width: none;
+    }
+    .tabs-bar::-webkit-scrollbar { display: none; }
+
+    .tab {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      font-size: 13px;
+      color: var(--text-2);
+      cursor: pointer;
+      border-right: 0.5px solid var(--border);
+      white-space: nowrap;
+      user-select: none;
+      background: var(--surface-2);
+      transition: background 0.1s, color 0.1s;
+      min-width: 0;
+      max-width: 180px;
+    }
+    .tab:hover { background: var(--surface); color: var(--text); }
+    .tab.active { background: var(--surface); color: var(--text); font-weight: 500; }
+    .tab-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+      outline: none;
+    }
+    .tab-name[contenteditable="true"] {
+      background: var(--surface-2);
+      border-radius: 3px;
+      padding: 0 3px;
+      min-width: 60px;
+    }
+    .tab-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-3);
+      font-size: 13px;
+      padding: 0 1px;
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+      border-radius: 3px;
+    }
+    .tab-close:hover { color: var(--text); background: var(--border); }
+    .tab-new {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-2);
+      font-size: 18px;
+      padding: 6px 12px;
+      display: flex;
+      align-items: center;
+      transition: color 0.1s;
+      flex-shrink: 0;
+    }
+    .tab-new:hover { color: var(--text); }
+
+    /* ── TOOLBAR ── */
     header {
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: 10px 20px;
+      gap: 8px;
+      padding: 8px 16px;
       border-bottom: 0.5px solid var(--border);
       background: var(--surface);
       flex-shrink: 0;
       flex-wrap: wrap;
-      row-gap: 8px;
+      row-gap: 6px;
     }
 
-    .app-title {
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--text);
-      margin-right: 4px;
-    }
-
-    .tb-sep { width: 0.5px; height: 18px; background: var(--border); margin: 0 2px; flex-shrink: 0; }
-    .tb-spacer { flex: 1; }
+    .tb-sep { width: 0.5px; height: 18px; background: var(--border); margin: 0 1px; flex-shrink: 0; }
+    .tb-spacer { flex: 1; min-width: 8px; }
 
     .tb-btn {
       background: none;
@@ -88,22 +159,117 @@
       transition: background 0.1s, border-color 0.1s, color 0.1s;
       white-space: nowrap;
     }
-
     .tb-btn:hover { background: var(--surface-2); border-color: var(--border); color: var(--text); }
     .tb-btn.active { background: var(--surface-2); border-color: var(--border); color: var(--text); }
 
-    .word-count {
+    /* ── STATS BAR ── */
+    .stats-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 5px 16px;
+      background: var(--surface);
+      border-bottom: 0.5px solid var(--border);
+      flex-shrink: 0;
+    }
+    .stat {
       font-size: 12px;
       color: var(--text-3);
-      font-family: var(--font);
+      display: flex;
+      align-items: center;
+      gap: 5px;
     }
+    .goal-wrap {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-left: auto;
+    }
+    .goal-label { font-size: 12px; color: var(--text-3); }
+    .goal-track {
+      width: 90px;
+      height: 4px;
+      background: var(--surface-2);
+      border-radius: 4px;
+      overflow: hidden;
+      border: 0.5px solid var(--border);
+    }
+    .goal-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 4px;
+      transition: width 0.3s;
+      max-width: 100%;
+    }
+    .goal-fill.done { background: #3B6D11; }
+    .goal-input {
+      width: 54px;
+      background: none;
+      border: 0.5px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-size: 12px;
+      font-family: var(--font);
+      color: var(--text-2);
+      outline: none;
+      text-align: right;
+    }
+    .goal-input:focus { border-color: var(--border-hover); }
 
+    /* ── LAYOUT ── */
     .main {
       display: flex;
       flex: 1;
       overflow: hidden;
     }
 
+    /* ── TOC SIDEBAR ── */
+    .toc-sidebar {
+      width: var(--sidebar-w);
+      flex-shrink: 0;
+      border-right: 0.5px solid var(--border);
+      background: var(--surface);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: width 0.2s;
+    }
+    .toc-sidebar.collapsed { width: 0; border-right: none; }
+    .toc-header {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      padding: 8px 14px 6px;
+      border-bottom: 0.5px solid var(--border);
+      flex-shrink: 0;
+    }
+    .toc-list {
+      overflow-y: auto;
+      flex: 1;
+      padding: 8px 0;
+    }
+    .toc-item {
+      display: block;
+      padding: 4px 14px;
+      font-size: 13px;
+      color: var(--text-2);
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      border-radius: 0;
+      transition: background 0.1s, color 0.1s;
+      text-decoration: none;
+    }
+    .toc-item:hover { background: var(--surface-2); color: var(--text); }
+    .toc-item.h1 { font-weight: 500; color: var(--text); padding-left: 14px; }
+    .toc-item.h2 { padding-left: 22px; font-size: 12.5px; }
+    .toc-item.h3 { padding-left: 32px; font-size: 12px; color: var(--text-3); }
+    .toc-empty { padding: 12px 14px; font-size: 12px; color: var(--text-3); font-style: italic; }
+
+    /* ── PANES ── */
     .pane {
       flex: 1;
       display: flex;
@@ -111,7 +277,6 @@
       overflow: hidden;
       min-width: 0;
     }
-
     .pane + .pane { border-left: 0.5px solid var(--border); }
 
     .pane-label {
@@ -120,7 +285,7 @@
       color: var(--text-3);
       letter-spacing: 0.07em;
       text-transform: uppercase;
-      padding: 8px 16px 6px;
+      padding: 7px 16px 6px;
       border-bottom: 0.5px solid var(--border);
       background: var(--surface);
       flex-shrink: 0;
@@ -158,7 +323,8 @@
     #preview li { margin-bottom: 5px; }
     #preview strong { font-weight: 500; }
     #preview em { font-style: italic; }
-    #preview a { color: #185FA5; text-decoration: none; }
+    #preview del { opacity: 0.5; }
+    #preview a { color: var(--accent); text-decoration: none; }
     #preview a:hover { text-decoration: underline; }
     #preview code {
       font-family: var(--mono);
@@ -172,29 +338,38 @@
       background: var(--surface-2);
       border: 0.5px solid var(--border);
       border-radius: var(--radius-md);
-      padding: 14px 16px;
+      padding: 0;
       margin: 0 0 14px;
       overflow-x: auto;
     }
-    #preview pre code { background: none; border: none; padding: 0; font-size: 13px; }
-    #preview blockquote {
-      border-left: 2px solid var(--border-hover);
-      border-radius: 0;
-      padding-left: 14px;
-      color: var(--text-2);
-      margin: 0 0 14px;
+    #preview pre code {
+      background: none !important;
+      border: none;
+      padding: 14px 16px;
+      font-size: 13px;
+      display: block;
     }
+    #preview blockquote { border-left: 2px solid var(--border-hover); border-radius: 0; padding-left: 14px; color: var(--text-2); margin: 0 0 14px; }
     #preview hr { border: none; border-top: 0.5px solid var(--border); margin: 20px 0; }
     #preview table { width: 100%; border-collapse: collapse; margin: 0 0 14px; font-size: 14px; }
     #preview th, #preview td { border: 0.5px solid var(--border); padding: 7px 12px; text-align: left; }
     #preview th { background: var(--surface-2); font-weight: 500; }
     #preview img { max-width: 100%; border-radius: var(--radius-md); }
 
-    .focus-mode #preview { display: none; }
+    /* ── FOCUS MODE ── */
+    .focus-mode .toc-sidebar { width: 0; border-right: none; }
     .focus-mode .pane + .pane { display: none; }
-    .focus-mode #editor { max-width: 680px; margin: 0 auto; background: var(--surface); }
+    .focus-mode #editor { max-width: 700px; margin: 0 auto; background: var(--surface); }
 
-    @media (max-width: 640px) {
+    /* ── HLJS DARK OVERRIDE ── */
+    @media (prefers-color-scheme: dark) {
+      #hljs-light { display: none; }
+      #hljs-dark { display: block !important; }
+      .hljs { background: var(--surface-2) !important; }
+    }
+
+    @media (max-width: 768px) {
+      .toc-sidebar { display: none; }
       .main { flex-direction: column; }
       .pane + .pane { border-left: none; border-top: 0.5px solid var(--border); }
       body { overflow: auto; }
@@ -205,12 +380,16 @@
 </head>
 <body>
 
-<header>
-  <span class="app-title">Markdown Editor</span>
-  <div class="tb-sep"></div>
+<!-- TABS -->
+<div class="tabs-bar" id="tabs-bar">
+  <!-- rendered by JS -->
+  <button class="tab-new" id="btn-new-tab" title="New document" aria-label="New document"><i class="ti ti-plus" aria-hidden="true"></i></button>
+</div>
 
-  <button class="tb-btn" data-wrap="**" data-wrap-end="**" title="Bold"><i class="ti ti-bold" aria-hidden="true"></i></button>
-  <button class="tb-btn" data-wrap="_" data-wrap-end="_" title="Italic"><i class="ti ti-italic" aria-hidden="true"></i></button>
+<!-- TOOLBAR -->
+<header>
+  <button class="tb-btn" data-wrap="**" data-wrap-end="**" title="Bold (Ctrl+B)"><i class="ti ti-bold" aria-hidden="true"></i></button>
+  <button class="tb-btn" data-wrap="_" data-wrap-end="_" title="Italic (Ctrl+I)"><i class="ti ti-italic" aria-hidden="true"></i></button>
   <button class="tb-btn" data-wrap="`" data-wrap-end="`" title="Inline code"><i class="ti ti-code" aria-hidden="true"></i></button>
   <div class="tb-sep"></div>
   <button class="tb-btn" data-line="## " title="Heading 2">H2</button>
@@ -219,45 +398,66 @@
   <button class="tb-btn" data-line="1. " title="Ordered list"><i class="ti ti-list-numbers" aria-hidden="true"></i></button>
   <button class="tb-btn" data-line="> " title="Blockquote"><i class="ti ti-blockquote" aria-hidden="true"></i></button>
   <div class="tb-sep"></div>
-  <button class="tb-btn" id="btn-link" title="Insert link"><i class="ti ti-link" aria-hidden="true"></i></button>
+  <button class="tb-btn" id="btn-link" title="Insert link (Ctrl+K)"><i class="ti ti-link" aria-hidden="true"></i></button>
   <button class="tb-btn" id="btn-hr" title="Horizontal rule"><i class="ti ti-minus" aria-hidden="true"></i></button>
-
   <div class="tb-sep"></div>
+  <button class="tb-btn" id="btn-toc" title="Toggle table of contents"><i class="ti ti-list-tree" aria-hidden="true"></i> ToC</button>
   <button class="tb-btn" id="btn-focus" title="Focus mode"><i class="ti ti-focus" aria-hidden="true"></i> Focus</button>
+  <div class="tb-sep"></div>
   <button class="tb-btn" id="btn-copy" title="Copy markdown"><i class="ti ti-copy" aria-hidden="true"></i> Copy</button>
-  <button class="tb-btn" id="btn-download" title="Download .md file"><i class="ti ti-download" aria-hidden="true"></i> Download</button>
-
-  <div class="tb-spacer"></div>
-  <span class="word-count" id="word-count">0 words</span>
+  <button class="tb-btn" id="btn-export-md" title="Download .md"><i class="ti ti-download" aria-hidden="true"></i> .md</button>
+  <button class="tb-btn" id="btn-export-html" title="Export as HTML"><i class="ti ti-file-type-html" aria-hidden="true"></i> HTML</button>
 </header>
 
+<!-- STATS BAR -->
+<div class="stats-bar">
+  <span class="stat"><i class="ti ti-letter-case" aria-hidden="true"></i> <span id="stat-words">0 words</span></span>
+  <span class="stat"><i class="ti ti-clock" aria-hidden="true"></i> <span id="stat-read">0 min read</span></span>
+  <span class="stat"><i class="ti ti-letter-spacing" aria-hidden="true"></i> <span id="stat-chars">0 chars</span></span>
+  <div class="goal-wrap">
+    <span class="goal-label">Goal:</span>
+    <input class="goal-input" id="goal-input" type="number" min="0" max="99999" value="500" title="Word goal" aria-label="Word count goal" />
+    <span class="goal-label">words</span>
+    <div class="goal-track" title="Progress toward goal">
+      <div class="goal-fill" id="goal-fill" style="width:0%"></div>
+    </div>
+    <span class="goal-label" id="goal-pct">0%</span>
+  </div>
+</div>
+
+<!-- MAIN -->
 <div class="main" id="main">
+  <aside class="toc-sidebar collapsed" id="toc-sidebar" aria-label="Table of contents">
+    <div class="toc-header">Contents</div>
+    <div class="toc-list" id="toc-list"></div>
+  </aside>
   <div class="pane">
     <div class="pane-label">Markdown</div>
     <textarea id="editor" spellcheck="true" placeholder="Start writing…" aria-label="Markdown input"></textarea>
   </div>
-  <div class="pane">
+  <div class="pane" id="preview-pane">
     <div class="pane-label">Preview</div>
     <div id="preview" aria-label="Rendered preview" aria-live="polite"></div>
   </div>
 </div>
 
 <script>
-const DEFAULT = `# Welcome to Markdown Editor
+// ── DEFAULTS ──────────────────────────────────────────────────────────────────
+const DEFAULT_CONTENT = `# Welcome to Markdown Editor
 
-A clean, distraction-free editor with **live preview**. Start typing on the left to see your formatted output appear here on the right.
+A clean, distraction-free writing tool with **live preview**. All your documents are saved automatically.
 
-## Features
+## What's new
 
-- Live preview as you type
-- Toolbar shortcuts for common formatting
-- Focus mode to eliminate distractions
-- Download your work as a \`.md\` file
-- Auto-saves to localStorage
+- **Document tabs** — manage multiple documents, rename with a double-click
+- **Table of contents** — click the ToC button to navigate by heading
+- **Syntax highlighting** — code blocks get full language highlighting
+- **Export to HTML** — download a fully styled, self-contained web page
+- **Word goal** — track progress with the bar in the stats strip below the toolbar
 
 ## Formatting quick reference
 
-Use \`**bold**\` for **bold text**, \`_italic_\` for _italic_, and backticks for \`inline code\`.
+Use \`**bold**\` for **bold**, \`_italic_\` for _italic_, and \`~~strikethrough~~\` for ~~strikethrough~~.
 
 ### Code blocks
 
@@ -276,16 +476,37 @@ function greet(name) {
 Happy writing!
 `;
 
-const editor = document.getElementById('editor');
-const preview = document.getElementById('preview');
-const wordCount = document.getElementById('word-count');
-const main = document.getElementById('main');
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let docs, activeId;
 
+function loadState() {
+  try {
+    const raw = localStorage.getItem('md_editor_v2');
+    if (raw) {
+      const s = JSON.parse(raw);
+      docs = s.docs;
+      activeId = s.activeId;
+      return;
+    }
+  } catch(e) {}
+  const id = uid();
+  docs = [{ id, name: 'Untitled', content: DEFAULT_CONTENT }];
+  activeId = id;
+}
+
+function saveState() {
+  try { localStorage.setItem('md_editor_v2', JSON.stringify({ docs, activeId })); } catch(e) {}
+}
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+function activeDoc() { return docs.find(d => d.id === activeId); }
+
+// ── MARKDOWN PARSER ───────────────────────────────────────────────────────────
 function parseMarkdown(md) {
   let html = md
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     .replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) =>
-      `<pre><code class="lang-${lang}">${code.trim()}</code></pre>`)
+      `<pre><code class="${lang ? 'language-' + lang : ''}">${code.trim()}</code></pre>`)
     .replace(/`([^`\n]+)`/g,'<code>$1</code>')
     .replace(/^#{3} (.+)$/gm,'<h3>$1</h3>')
     .replace(/^#{2} (.+)$/gm,'<h2>$1</h2>')
@@ -315,21 +536,191 @@ function parseMarkdown(md) {
   return html;
 }
 
+// ── DOM REFS ──────────────────────────────────────────────────────────────────
+const editor    = document.getElementById('editor');
+const preview   = document.getElementById('preview');
+const tabsBar   = document.getElementById('tabs-bar');
+const tocList   = document.getElementById('toc-list');
+const tocSidebar= document.getElementById('toc-sidebar');
+const mainEl    = document.getElementById('main');
+const goalInput = document.getElementById('goal-input');
+const goalFill  = document.getElementById('goal-fill');
+const goalPct   = document.getElementById('goal-pct');
+
+// ── TABS ──────────────────────────────────────────────────────────────────────
+function renderTabs() {
+  // Remove existing tabs (keep the new-tab button)
+  tabsBar.querySelectorAll('.tab').forEach(t => t.remove());
+  const newBtn = document.getElementById('btn-new-tab');
+
+  docs.forEach(doc => {
+    const tab = document.createElement('div');
+    tab.className = 'tab' + (doc.id === activeId ? ' active' : '');
+    tab.dataset.id = doc.id;
+
+    const nameEl = document.createElement('span');
+    nameEl.className = 'tab-name';
+    nameEl.textContent = doc.name;
+    nameEl.title = 'Double-click to rename';
+
+    nameEl.addEventListener('dblclick', e => {
+      e.stopPropagation();
+      nameEl.contentEditable = 'true';
+      nameEl.focus();
+      const range = document.createRange();
+      range.selectNodeContents(nameEl);
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(range);
+    });
+    nameEl.addEventListener('blur', () => {
+      nameEl.contentEditable = 'false';
+      doc.name = nameEl.textContent.trim() || 'Untitled';
+      nameEl.textContent = doc.name;
+      saveState();
+    });
+    nameEl.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); nameEl.blur(); }
+      if (e.key === 'Escape') { nameEl.textContent = doc.name; nameEl.blur(); }
+    });
+
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'tab-close';
+    closeBtn.innerHTML = '<i class="ti ti-x" aria-hidden="true"></i>';
+    closeBtn.title = 'Close document';
+    closeBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      closeDoc(doc.id);
+    });
+
+    tab.appendChild(nameEl);
+    tab.appendChild(closeBtn);
+    tab.addEventListener('click', () => switchDoc(doc.id));
+    tabsBar.insertBefore(tab, newBtn);
+  });
+}
+
+function switchDoc(id) {
+  // Save current editor content first
+  const cur = activeDoc();
+  if (cur) cur.content = editor.value;
+  activeId = id;
+  const doc = activeDoc();
+  editor.value = doc ? doc.content : '';
+  renderTabs();
+  update();
+  saveState();
+}
+
+function newDoc() {
+  const cur = activeDoc();
+  if (cur) cur.content = editor.value;
+  const id = uid();
+  docs.push({ id, name: 'Untitled', content: '' });
+  activeId = id;
+  renderTabs();
+  editor.value = '';
+  update();
+  editor.focus();
+  saveState();
+  // Trigger rename immediately
+  const newTab = tabsBar.querySelector(`.tab[data-id="${id}"] .tab-name`);
+  if (newTab) {
+    newTab.contentEditable = 'true';
+    newTab.focus();
+    const range = document.createRange();
+    range.selectNodeContents(newTab);
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+  }
+}
+
+function closeDoc(id) {
+  if (docs.length === 1) {
+    // Reset to blank instead of deleting last tab
+    docs[0].content = '';
+    docs[0].name = 'Untitled';
+    editor.value = '';
+    renderTabs();
+    update();
+    saveState();
+    return;
+  }
+  const idx = docs.findIndex(d => d.id === id);
+  docs.splice(idx, 1);
+  if (activeId === id) {
+    activeId = docs[Math.min(idx, docs.length - 1)].id;
+    editor.value = activeDoc().content;
+  }
+  renderTabs();
+  update();
+  saveState();
+}
+
+// ── TOC ───────────────────────────────────────────────────────────────────────
+function buildToc(md) {
+  const headings = [...md.matchAll(/^(#{1,3}) (.+)$/gm)];
+  if (!headings.length) {
+    tocList.innerHTML = '<span class="toc-empty">No headings yet</span>';
+    return;
+  }
+  tocList.innerHTML = '';
+  headings.forEach(([, hashes, text]) => {
+    const level = hashes.length;
+    const a = document.createElement('a');
+    a.className = `toc-item h${level}`;
+    a.textContent = text;
+    a.href = '#';
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      // Find the heading in the preview and scroll to it
+      const allHeadings = preview.querySelectorAll('h1,h2,h3');
+      for (const el of allHeadings) {
+        if (el.textContent.trim() === text.trim()) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          break;
+        }
+      }
+    });
+    tocList.appendChild(a);
+  });
+}
+
+// ── STATS ─────────────────────────────────────────────────────────────────────
+function updateStats(md) {
+  const words = md.trim() ? md.trim().split(/\s+/).length : 0;
+  const chars = md.length;
+  const readMins = Math.max(1, Math.round(words / 200));
+  const goal = parseInt(goalInput.value) || 0;
+  const pct = goal > 0 ? Math.min(100, Math.round((words / goal) * 100)) : 0;
+
+  document.getElementById('stat-words').textContent = `${words.toLocaleString()} word${words !== 1 ? 's' : ''}`;
+  document.getElementById('stat-read').textContent = `${readMins} min read`;
+  document.getElementById('stat-chars').textContent = `${chars.toLocaleString()} chars`;
+  goalFill.style.width = pct + '%';
+  goalFill.classList.toggle('done', pct >= 100);
+  goalPct.textContent = pct + '%';
+}
+
+// ── UPDATE ────────────────────────────────────────────────────────────────────
 function update() {
   const md = editor.value;
   preview.innerHTML = parseMarkdown(md);
-  const words = md.trim() ? md.trim().split(/\s+/).length : 0;
-  wordCount.textContent = `${words} word${words !== 1 ? 's' : ''}`;
-  try { localStorage.setItem('md_editor_v1', md); } catch(e) {}
+  // Syntax highlighting
+  preview.querySelectorAll('pre code').forEach(block => {
+    if (typeof hljs !== 'undefined') hljs.highlightElement(block);
+  });
+  buildToc(md);
+  updateStats(md);
+  const doc = activeDoc();
+  if (doc) doc.content = md;
+  saveState();
 }
 
+// ── EDITOR HELPERS ────────────────────────────────────────────────────────────
 function insertWrap(before, after) {
   const s = editor.selectionStart, e = editor.selectionEnd;
   const sel = editor.value.slice(s, e) || 'text';
   editor.setRangeText(before + sel + after, s, e, 'select');
-  if (!editor.value.slice(s, e)) {
-    editor.setSelectionRange(s + before.length, s + before.length + 4);
-  }
   editor.focus(); update();
 }
 
@@ -340,6 +731,7 @@ function insertLine(prefix) {
   editor.focus(); update();
 }
 
+// ── TOOLBAR EVENTS ────────────────────────────────────────────────────────────
 document.querySelectorAll('[data-wrap]').forEach(btn =>
   btn.addEventListener('click', () => insertWrap(btn.dataset.wrap, btn.dataset.wrapEnd)));
 
@@ -361,10 +753,15 @@ document.getElementById('btn-hr').addEventListener('click', () => {
   editor.focus(); update();
 });
 
-document.getElementById('btn-focus').addEventListener('click', function() {
-  main.classList.toggle('focus-mode');
+document.getElementById('btn-toc').addEventListener('click', function() {
+  tocSidebar.classList.toggle('collapsed');
   this.classList.toggle('active');
-  this.querySelector('i').className = main.classList.contains('focus-mode')
+});
+
+document.getElementById('btn-focus').addEventListener('click', function() {
+  mainEl.classList.toggle('focus-mode');
+  this.classList.toggle('active');
+  this.querySelector('i').className = mainEl.classList.contains('focus-mode')
     ? 'ti ti-focus-off' : 'ti ti-focus';
 });
 
@@ -376,14 +773,73 @@ document.getElementById('btn-copy').addEventListener('click', function() {
   });
 });
 
-document.getElementById('btn-download').addEventListener('click', () => {
+document.getElementById('btn-export-md').addEventListener('click', () => {
+  const name = (activeDoc()?.name || 'document').replace(/[^a-z0-9_-]/gi, '-');
   const blob = new Blob([editor.value], { type: 'text/markdown' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'document.md';
+  a.download = name + '.md';
   a.click();
   URL.revokeObjectURL(a.href);
 });
+
+document.getElementById('btn-export-html').addEventListener('click', () => {
+  const name = (activeDoc()?.name || 'document').replace(/[^a-z0-9_-]/gi, '-');
+  const bodyHtml = preview.innerHTML;
+  const hljsStyle = `https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css`;
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>${activeDoc()?.name || 'Document'}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono:wght@400&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="${hljsStyle}" />
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#f5f4f0;--surface:#fff;--surface-2:#efefeb;--border:rgba(0,0,0,.1);--text:#1a1a18;--text-2:#6b6b67;--mono:'DM Mono',monospace}
+@media(prefers-color-scheme:dark){:root{--bg:#1a1a18;--surface:#242422;--surface-2:#2e2e2c;--border:rgba(255,255,255,.1);--text:#f0efe8;--text-2:#a0a09c}}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);padding:3rem 1.5rem;line-height:1.8;font-size:16px}
+.content{max-width:720px;margin:0 auto}
+h1{font-size:28px;font-weight:500;margin:0 0 16px;padding-bottom:10px;border-bottom:.5px solid var(--border)}
+h2{font-size:22px;font-weight:500;margin:36px 0 12px}
+h3{font-size:18px;font-weight:500;margin:28px 0 10px}
+p{margin:0 0 16px}
+ul,ol{padding-left:1.5rem;margin:0 0 16px}
+li{margin-bottom:6px}
+a{color:#185FA5;text-decoration:none}
+a:hover{text-decoration:underline}
+code{font-family:var(--mono);font-size:13px;background:var(--surface-2);border:.5px solid var(--border);border-radius:4px;padding:1px 5px}
+pre{background:var(--surface-2);border:.5px solid var(--border);border-radius:8px;padding:0;margin:0 0 16px;overflow-x:auto}
+pre code{background:none!important;border:none;padding:14px 16px;display:block;font-size:13.5px}
+blockquote{border-left:2px solid var(--border);padding-left:14px;color:var(--text-2);margin:0 0 16px}
+hr{border:none;border-top:.5px solid var(--border);margin:24px 0}
+table{width:100%;border-collapse:collapse;margin:0 0 16px;font-size:14px}
+th,td{border:.5px solid var(--border);padding:8px 12px;text-align:left}
+th{background:var(--surface-2);font-weight:500}
+img{max-width:100%;border-radius:8px}
+strong{font-weight:500}
+del{opacity:.5}
+</style>
+</head>
+<body>
+<div class="content">
+${bodyHtml}
+</div>
+</body>
+</html>`;
+  const blob = new Blob([html], { type: 'text/html' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name + '.html';
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+document.getElementById('btn-new-tab').addEventListener('click', newDoc);
+
+goalInput.addEventListener('input', () => updateStats(editor.value));
 
 editor.addEventListener('input', update);
 
@@ -399,13 +855,18 @@ editor.addEventListener('keydown', e => {
   if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); document.getElementById('btn-link').click(); }
 });
 
-try {
-  const saved = localStorage.getItem('md_editor_v1');
-  editor.value = saved !== null ? saved : DEFAULT;
-} catch(e) {
-  editor.value = DEFAULT;
-}
+// ── INIT ──────────────────────────────────────────────────────────────────────
+loadState();
+renderTabs();
+const doc = activeDoc();
+editor.value = doc ? doc.content : DEFAULT_CONTENT;
 update();
+
+// Apply dark mode hljs correctly on init
+if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+  document.getElementById('hljs-dark').removeAttribute('disabled');
+  document.getElementById('hljs-light').setAttribute('disabled', '');
+}
 </script>
 </body>
 </html>
