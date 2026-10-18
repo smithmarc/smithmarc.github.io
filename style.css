@@ -70,3 +70,13 @@ header a:hover {
   background: #69f0ae;
   color: #000;
 }
+
+.main .weather-app {
+  background: #87d7d7;
+  color: #000;
+}
+
+.main .markdown-app {
+  background: #dfffaf;
+  color: #000;
+}
